@@ -69,7 +69,7 @@ upwork-proposal-generator/
 
 Deployed on Hetzner CX23 (2 vCPU, 4GB RAM).
 
-**Live Dashboard:** http://46.225.52.33:3000
+**Live Dashboard:** https://upwork.webxhosts.in
 
 **Admin Tabs:**
 - **Prompts** - Edit system and user prompts
