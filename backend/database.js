@@ -33,7 +33,7 @@ Required Skills: {{skills}}
 
 Create a professional, personalized proposal that stands out. Keep it under 300 words.`;
 
-const DEFAULT_SYSTEM_PROMPT = `You write Upwork proposals for Khushi Agrawal from Tridhya Tech.
+const PREVIOUS_SYSTEM_PROMPT = `You write Upwork proposals for Khushi Agrawal from Tridhya Tech.
 
 Follow these rules in every response:
 Start with "Hi!".
@@ -50,7 +50,7 @@ Do not invent facts, fake case studies, fake metrics, or unrealistic guarantees.
 Avoid generic lines like "Hope you are doing well" and avoid partnership pitch tone.
 Do not use em dash characters.`;
 
-const DEFAULT_USER_PROMPT = `Write one strong Upwork proposal using the details below.
+const PREVIOUS_USER_PROMPT = `Write one strong Upwork proposal using the details below.
 
 Sender identity:
 Name: Khushi Agrawal
@@ -76,6 +76,10 @@ No headings.
 No markdown.
 Start with "Hi!" and end with one specific question tied to this job.
 Keep it specific to this client request and focus on business results.`;
+
+const DEFAULT_SYSTEM_PROMPT = `You are writing Upwork proposals for Khushi Agrawal, Business Development Executive at Tridhya Tech, and every response must sound like a real human who understands delivery realities, not like a generic agency pitch. Every proposal must start with exactly "Hi!" and must never start with "Ah.", must use plain simple English with no jargon or complicated words, and must stay short, engaging, and easy to read while still feeling thoughtful and specific. Keep the tone professional but warm, add light personality with subtle humor only when natural, focus on what the client truly cares about such as outcomes, risk reduction, speed, quality, and clarity, and explain the approach in a few crisp sentences without bullet points, numbered lists, headings, markdown, buzzwords, or em dash characters. Avoid generic openings like "Hope this finds you well", avoid fake claims, fake numbers, and unrealistic guarantees, mention only capabilities that are relevant to the posted requirement, and always end with one relevant low-friction question that keeps the conversation moving forward.`;
+
+const DEFAULT_USER_PROMPT = `Write one high-quality Upwork proposal for Khushi Agrawal from Tridhya Tech using this requirement: job title "{{title}}", job description "{{description}}", budget "{{budget}}", and required skills "{{skills}}". The proposal must begin with "Hi!", must never begin with "Ah.", and must be written as short flowing paragraph statements in plain simple English with no bullet points, numbering, headings, or markdown. Keep it practical and client-focused by briefly showing that you understood the exact requirement, describing a clear and realistic approach in a few sentences, highlighting only relevant delivery confidence without overpromising, and keeping the full response concise and engaging. End with one specific question that is directly relevant to this project so the client is encouraged to reply. Return only the final proposal text, ready to copy and send.`;
 
 // Ensure data directory exists
 if (!fs.existsSync(dataDir)) {
@@ -180,7 +184,11 @@ function migrateLegacyPromptDefaults() {
   let hasUpdates = false;
 
   const systemPrompt = queryOne('SELECT id, content FROM prompts WHERE type = ?', ['system']);
-  if (systemPrompt && systemPrompt.content === LEGACY_SYSTEM_PROMPT) {
+  const shouldMigrateSystemPrompt = systemPrompt && [
+    LEGACY_SYSTEM_PROMPT,
+    PREVIOUS_SYSTEM_PROMPT
+  ].includes(systemPrompt.content);
+  if (shouldMigrateSystemPrompt) {
     db.run('UPDATE prompts SET content = ?, updated_at = datetime("now") WHERE id = ?', [
       DEFAULT_SYSTEM_PROMPT,
       systemPrompt.id
@@ -189,7 +197,11 @@ function migrateLegacyPromptDefaults() {
   }
 
   const userPrompt = queryOne('SELECT id, content FROM prompts WHERE type = ?', ['user']);
-  if (userPrompt && userPrompt.content === LEGACY_USER_PROMPT) {
+  const shouldMigrateUserPrompt = userPrompt && [
+    LEGACY_USER_PROMPT,
+    PREVIOUS_USER_PROMPT
+  ].includes(userPrompt.content);
+  if (shouldMigrateUserPrompt) {
     db.run('UPDATE prompts SET content = ?, updated_at = datetime("now") WHERE id = ?', [
       DEFAULT_USER_PROMPT,
       userPrompt.id
