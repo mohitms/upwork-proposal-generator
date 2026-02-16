@@ -1,9 +1,11 @@
 # Upwork Proposal Generator - Progress Tracker
 
 ## Project Overview
-- **Tech Stack**: Node.js, Express, SQLite, GLM 5 (Z.AI)
+- **Tech Stack**: Node.js, Express, SQLite (sql.js), Z.AI (GLM)
 - **Target**: Hetzner CX23 (2 vCPU, 4GB RAM)
 - **Repo**: github.com/mohitms/upwork-proposal-generator
+- **Live URL**: https://upwork.webxhosts.in
+- **Last Updated**: 2026-02-16
 
 ---
 
@@ -15,57 +17,75 @@
 - [x] Set up Node.js with Express
 - [x] Create SQLite database schema
 - [x] Create database helper functions
-- [x] Basic Express server with /api/health
+- [x] Add `/api/health` endpoint
 - [x] Push to GitHub
-- [x] Update PROGRESS.md
+- [x] Update `PROGRESS.md`
 
 ---
 
-## PHASE 2: AI Integration (GLM 5 Only)
-**Status**: 🔄 In Progress
+## PHASE 2: AI Integration (Z.AI GLM)
+**Status**: ✅ Complete (2026-02-16)
 
-- [ ] Install axios for API calls
-- [ ] Create src/services/ai.js
-- [ ] Load system/user prompts from database
-- [ ] Create /api/generate-proposal endpoint
-- [ ] Add error handling
-- [ ] Test endpoint
-- [ ] Push to GitHub
-- [ ] Update PROGRESS.md
+- [x] Install axios for API calls
+- [x] Create `backend/src/services/ai.js`
+- [x] Load system/user prompts from database
+- [x] Create `/api/generate-proposal` endpoint
+- [x] Add API/network error handling
+- [x] Add configurable model support (`GLM_MODEL`)
+- [x] Switch endpoint to `https://api.z.ai/api/paas/v4/chat/completions`
+- [x] Add optional thinking config (`GLM_THINKING_TYPE`)
+- [x] Update environment docs (`.env.example`, `README.md`)
 
 ---
 
 ## PHASE 3: Admin Dashboard + Test UI
-**Status**: ⏳ Pending
-
-- [ ] Create public/ folder with dashboard files
-- [ ] Build Prompts tab
-- [ ] Build Logs tab
-- [ ] Build Settings tab
-- [ ] Build Test Generator tab
-- [ ] Create admin API routes
-- [ ] Test all functionality
-- [ ] Push to GitHub
-- [ ] Update PROGRESS.md
-
----
-
-## PHASE 4: Deployment to Hetzner
 **Status**: ✅ Complete (2026-02-16)
 
-- [x] Create .env file
-- [x] Set up PM2
-- [x] Configure process manager
-- [x] Test external access
-- [x] Update README with URL
-- [x] Push final version
-- [x] Update PROGRESS.md
-
-**Live URL**: https://upwork.webxhosts.in
+- [x] Build dashboard tabs (Prompts, Test, Logs, Settings)
+- [x] Add prompt management API/UI
+- [x] Add logs API/UI
+- [x] Add API key management API/UI
+- [x] Add usage stats API/UI
+- [x] Add login page (`public/login.html`) and login logic (`public/login.js`)
 
 ---
 
-## Notes
-- API key source: ~/.openclaw/agents/main/agent/auth-profiles.json (zai:default)
-- Keep lightweight for Hetzner CX23
-- Dashboard must be mobile-friendly
+## PHASE 4: Security + Hardening
+**Status**: ✅ Complete (2026-02-16)
+
+- [x] Add session-based admin authentication
+- [x] Protect admin API routes
+- [x] Protect proposal generation endpoint
+- [x] Add logout flow
+- [x] Add CORS allowlist support (`ALLOWED_ORIGINS`)
+- [x] Add request rate limiting on proposal generation
+- [x] Reduce production error leakage
+- [x] Fix broken log delete path (`db.run is not a function`)
+- [x] Normalize DB params to avoid `undefined` binding failures
+
+---
+
+## PHASE 5: Deployment to Hetzner
+**Status**: ✅ Complete (2026-02-16)
+
+- [x] Configure PM2 process (`ecosystem.config.js`)
+- [x] Deploy and run on VPS
+- [x] Verify public dashboard URL
+- [x] Keep environment-driven runtime configuration
+
+---
+
+## Current Runtime Config (Env)
+- `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_TTL_MS`
+- `GLM_API_KEY`, `GLM_MODEL`, `GLM_API_URL`, `GLM_THINKING_TYPE`
+- `ALLOWED_ORIGINS`, `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX_REQUESTS`
+- `DATABASE_PATH`
+
+---
+
+## Next Suggested Steps
+- [ ] Pull latest commit on VPS
+- [ ] Ensure VPS `.env` includes the new vars above
+- [ ] Restart PM2 with updated env
+- [ ] Verify login flow + proposal generation on production
+- [ ] Rotate API key if needed

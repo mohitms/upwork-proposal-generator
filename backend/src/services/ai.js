@@ -1,14 +1,31 @@
 /**
- * AI Service - GLM 5 Integration via Z.AI API
+ * AI Service - Z.AI GLM Integration
  */
 
 const axios = require('axios');
 
-const GLM_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-const GLM_MODEL = 'glm-5';
+const GLM_API_URL = process.env.GLM_API_URL || 'https://api.z.ai/api/paas/v4/chat/completions';
+const GLM_MODEL = process.env.GLM_MODEL || 'glm-4.7';
+const GLM_THINKING_TYPE = process.env.GLM_THINKING_TYPE || 'enabled';
+
+function buildRequestPayload({ model, messages, temperature, maxTokens, topP }) {
+  const payload = {
+    model,
+    messages,
+    temperature,
+    max_tokens: maxTokens,
+    top_p: topP
+  };
+
+  if (GLM_THINKING_TYPE === 'enabled' || GLM_THINKING_TYPE === 'disabled') {
+    payload.thinking = { type: GLM_THINKING_TYPE };
+  }
+
+  return payload;
+}
 
 /**
- * Generate a proposal using GLM 5
+ * Generate a proposal using GLM
  * @param {Object} params - Proposal parameters
  * @param {string} params.title - Project title
  * @param {string} params.description - Project description
@@ -36,16 +53,16 @@ async function generateProposal(params) {
   }
 
   try {
-    const response = await axios.post(GLM_API_URL, {
+    const response = await axios.post(GLM_API_URL, buildRequestPayload({
       model: GLM_MODEL,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.7,
-      max_tokens: 1000,
-      top_p: 0.9
-    }, {
+      maxTokens: 1000,
+      topP: 0.9
+    }), {
       headers: {
         'Authorization': `Bearer ${resolvedApiKey}`,
         'Content-Type': 'application/json'
@@ -61,7 +78,7 @@ async function generateProposal(params) {
 
     return {
       proposal,
-      model: GLM_MODEL,
+      model: response.data?.model || GLM_MODEL,
       usage: response.data?.usage || null
     };
   } catch (error) {
@@ -78,7 +95,7 @@ async function generateProposal(params) {
         throw new Error('Rate limit exceeded. Please try again later.');
       }
       
-      throw new Error(`API error (${status}): ${data?.error?.message || 'Unknown error'}`);
+      throw new Error(`API error (${status}): ${data?.error?.message || data?.message || 'Unknown error'}`);
     }
     
     if (error.code === 'ECONNABORTED') {
@@ -106,13 +123,15 @@ async function testConnection(apiKey) {
     }
     
     // Simple test with minimal tokens
-    await axios.post(GLM_API_URL, {
+    await axios.post(GLM_API_URL, buildRequestPayload({
       model: GLM_MODEL,
       messages: [
         { role: 'user', content: 'Say "ok"' }
       ],
-      max_tokens: 5
-    }, {
+      temperature: 0,
+      maxTokens: 5,
+      topP: 1
+    }), {
       headers: {
         'Authorization': `Bearer ${resolvedApiKey}`,
         'Content-Type': 'application/json'

@@ -27,6 +27,7 @@ npm install
 # Configure environment
 cp .env.example .env
 # Edit .env with your API key + admin credentials
+# Optional: set GLM_MODEL to glm-4.7 or glm-5
 
 # Start server
 npm start

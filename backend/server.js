@@ -208,12 +208,16 @@ function getClientErrorMessage(error, fallbackMessage) {
 }
 
 function getApiKeyForProvider(provider) {
+  if (process.env.GLM_API_KEY) {
+    return process.env.GLM_API_KEY;
+  }
+
   const activeKey = db.apiKeys.getActive(provider);
   if (activeKey?.key) {
     return activeKey.key;
   }
 
-  return process.env.GLM_API_KEY || null;
+  return null;
 }
 
 function maskApiKey(key) {
