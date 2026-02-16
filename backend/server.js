@@ -8,6 +8,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const db = require('./database');
+const ai = require('./src/services/ai');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,6 +37,87 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     version: '1.0.0'
   });
+});
+
+/**
+ * Generate proposal endpoint
+ */
+app.post('/api/generate-proposal', async (req, res) => {
+  try {
+    const { title, description, budget, skills } = req.body;
+    
+    // Validate required fields
+    if (!title || !description) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'title and description are required' 
+      });
+    }
+    
+    // Get prompts from database
+    const systemPrompt = db.prompts.get('system');
+    const userPromptTemplate = db.prompts.get('user');
+    
+    if (!systemPrompt || !userPromptTemplate) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Prompts not configured' 
+      });
+    }
+    
+    // Generate proposal
+    const result = await ai.generateProposal({
+      title,
+      description,
+      budget: budget || 'Not specified',
+      skills: skills || 'Not specified',
+      systemPrompt: systemPrompt.content,
+      userPromptTemplate: userPromptTemplate.content
+    });
+    
+    // Log successful request
+    db.logs.create({
+      project_title: title,
+      description,
+      budget,
+      skills,
+      generated_proposal: result.proposal,
+      ai_model: result.model,
+      success: true,
+      error: null
+    });
+    
+    res.json({
+      success: true,
+      proposal: result.proposal,
+      model_used: result.model,
+      usage: result.usage
+    });
+    
+  } catch (error) {
+    console.error('Error generating proposal:', error);
+    
+    // Log failed request
+    try {
+      db.logs.create({
+        project_title: req.body.title,
+        description: req.body.description,
+        budget: req.body.budget,
+        skills: req.body.skills,
+        generated_proposal: null,
+        ai_model: ai.GLM_MODEL,
+        success: false,
+        error: error.message
+      });
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate proposal'
+    });
+  }
 });
 
 // ============================================
