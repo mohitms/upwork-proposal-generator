@@ -192,6 +192,36 @@ app.get('/admin/api/logs/:id', (req, res) => {
 });
 
 /**
+ * Delete a log
+ */
+app.delete('/admin/api/logs/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const log = db.logs.getById(id);
+    if (!log) {
+      return res.status(404).json({ success: false, error: 'Log not found' });
+    }
+    
+    runDelete('DELETE FROM request_logs WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Log deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting log:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Helper for DELETE
+function runDelete(sql, params) {
+  db.run(sql, params);
+  const data = db.export();
+  const buffer = Buffer.from(data);
+  const fs = require('fs');
+  const path = require('path');
+  const DB_PATH = process.env.DATABASE_PATH || path.join(__dirname, '..', 'data', 'proposals.db');
+  fs.writeFileSync(DB_PATH, buffer);
+}
+
+/**
  * Get API keys (masked)
  */
 app.get('/admin/api/keys', (req, res) => {

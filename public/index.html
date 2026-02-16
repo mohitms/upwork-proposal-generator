@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upwork Proposal Generator - Admin</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <h1>📝 Proposal Generator</h1>
+      <nav class="nav">
+        <button class="nav-btn active" data-tab="prompts">Prompts</button>
+        <button class="nav-btn" data-tab="generator">Test</button>
+        <button class="nav-btn" data-tab="logs">Logs</button>
+        <button class="nav-btn" data-tab="settings">Settings</button>
+      </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="content">
+      <!-- Prompts Tab -->
+      <section id="tab-prompts" class="tab active">
+        <h2>Prompt Configuration</h2>
+        
+        <div class="form-group">
+          <label for="system-prompt">System Prompt</label>
+          <textarea id="system-prompt" rows="8" placeholder="Loading..."></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="user-prompt">User Prompt Template</label>
+          <textarea id="user-prompt" rows="10" placeholder="Loading..."></textarea>
+          <p class="hint">Variables: {{title}}, {{description}}, {{budget}}, {{skills}}</p>
+        </div>
+        
+        <button id="save-prompts" class="btn btn-primary">Save Prompts</button>
+        <span id="prompts-status" class="status"></span>
+      </section>
+
+      <!-- Test Generator Tab -->
+      <section id="tab-generator" class="tab">
+        <h2>Test Proposal Generator</h2>
+        
+        <div class="form-group">
+          <label for="test-title">Job Title *</label>
+          <input type="text" id="test-title" placeholder="e.g., Need a React developer for e-commerce site">
+        </div>
+        
+        <div class="form-group">
+          <label for="test-description">Job Description *</label>
+          <textarea id="test-description" rows="6" placeholder="Paste the full job description here..."></textarea>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="test-budget">Budget</label>
+            <input type="text" id="test-budget" placeholder="e.g., $500-1000">
+          </div>
+          
+          <div class="form-group">
+            <label for="test-skills">Skills</label>
+            <input type="text" id="test-skills" placeholder="e.g., React, Node.js, MongoDB">
+          </div>
+        </div>
+        
+        <div class="btn-group">
+          <button id="generate-btn" class="btn btn-primary">Generate Proposal</button>
+          <button id="regenerate-btn" class="btn btn-secondary" disabled>Regenerate</button>
+        </div>
+        
+        <div id="result-container" class="result-container hidden">
+          <div class="result-header">
+            <h3>Generated Proposal</h3>
+            <span id="model-used" class="model-badge"></span>
+          </div>
+          
+          <div id="generated-proposal" class="proposal-output"></div>
+          
+          <div class="btn-group">
+            <button id="copy-btn" class="btn btn-secondary">📋 Copy</button>
+          </div>
+        </div>
+        
+        <div id="error-container" class="error-container hidden">
+          <p id="error-message"></p>
+        </div>
+      </section>
+
+      <!-- Logs Tab -->
+      <section id="tab-logs" class="tab">
+        <h2>Request Logs</h2>
+        
+        <div class="filters">
+          <select id="log-filter">
+            <option value="all">All Requests</option>
+            <option value="success">Successful Only</option>
+            <option value="failed">Failed Only</option>
+          </select>
+          
+          <button id="refresh-logs" class="btn btn-secondary">🔄 Refresh</button>
+        </div>
+        
+        <div id="stats-container" class="stats-container">
+          <div class="stat">
+            <span class="stat-value" id="stat-total">-</span>
+            <span class="stat-label">Total</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="stat-success">-</span>
+            <span class="stat-label">Success</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="stat-failed">-</span>
+            <span class="stat-label">Failed</span>
+          </div>
+        </div>
+        
+        <div id="logs-container" class="logs-container">
+          <p class="loading">Loading logs...</p>
+        </div>
+      </section>
+
+      <!-- Settings Tab -->
+      <section id="tab-settings" class="tab">
+        <h2>Settings</h2>
+        
+        <div class="form-group">
+          <label>API Key Status</label>
+          <div id="keys-container" class="keys-list">
+            <p class="loading">Loading...</p>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="new-key">Update GLM API Key</label>
+          <div class="input-group">
+            <input type="password" id="new-key" placeholder="Enter new API key">
+            <button id="update-key" class="btn btn-primary">Update</button>
+          </div>
+        </div>
+        
+        <span id="settings-status" class="status"></span>
+        
+        <div class="form-group">
+          <label>Server Info</label>
+          <div class="info-box">
+            <p><strong>Status:</strong> <span id="server-status">Checking...</span></p>
+            <p><strong>Port:</strong> <span id="server-port">-</span></p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
