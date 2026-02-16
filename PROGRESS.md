@@ -78,10 +78,28 @@
 
 ---
 
+## PHASE 6: URL Autofill + Scraping
+**Status**: ✅ Complete (2026-02-16)
+
+- [x] Add authenticated endpoint `POST /api/scrape-job-url`
+- [x] Add dedicated scrape rate limiter
+- [x] Implement Upwork-only URL validation with HTTPS enforcement
+- [x] Implement Playwright-first extraction path
+- [x] Add Cloudflare detection + user-safe fallback messaging
+- [x] Add parser fallback (`axios` + `cheerio`) for non-Cloudflare failures
+- [x] Convert scraped description HTML to clean markdown (`turndown`)
+- [x] Auto-fill title/description/budget/skills from URL in generator UI
+- [x] Add frontend status handling for scrape success/failure
+- [x] Add scraper unit/fixture tests (`node:test`)
+
+---
+
 ## Current Runtime Config (Env)
 - `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_TTL_MS`
 - `GLM_API_KEY`, `GLM_MODEL`, `GLM_API_URL`, `GLM_THINKING_TYPE`
 - `ALLOWED_ORIGINS`, `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX_REQUESTS`
+- `SCRAPER_RATE_LIMIT_WINDOW_MS`, `SCRAPER_RATE_LIMIT_MAX_REQUESTS`
+- `SCRAPER_NAV_TIMEOUT_MS`, `SCRAPER_CHALLENGE_WAIT_MS`, `SCRAPER_ENABLE_PARSER_FALLBACK`
 - `DATABASE_PATH`
 
 ---
@@ -90,6 +108,8 @@
 - [ ] Pull latest commit on VPS
 - [ ] Ensure VPS `.env` includes the new vars above
 - [ ] Restart PM2 with updated env
+- [ ] Ensure Playwright browsers are installed on VPS (`npx playwright install chromium`)
 - [ ] Verify login flow + proposal generation on production
+- [ ] Verify URL autofill flow with at least one real Upwork link
 - [ ] Tune prompts further based on real proposal acceptance feedback
 - [ ] Rotate API key if needed

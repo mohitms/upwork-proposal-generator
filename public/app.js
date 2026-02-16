@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Event Listeners
   document.getElementById('save-prompts').addEventListener('click', savePrompts);
+  document.getElementById('fetch-url-btn').addEventListener('click', fetchJobDataFromUrl);
   document.getElementById('generate-btn').addEventListener('click', generateProposal);
   document.getElementById('regenerate-btn').addEventListener('click', regenerateProposal);
   document.getElementById('copy-btn').addEventListener('click', copyProposal);
@@ -111,6 +112,7 @@ async function parseApiResponse(response) {
   if (!response.ok) {
     const error = new Error(data.error || `Request failed (${response.status})`);
     error.status = response.status;
+    error.code = data.code;
     if (response.status === 401) {
       window.location.href = '/login';
     }
@@ -215,6 +217,69 @@ async function savePrompts() {
 // ============================================
 // Test Generator Tab
 // ============================================
+
+function setUrlFetchStatus(message = '', type = '') {
+  const status = document.getElementById('url-fetch-status');
+  if (!status) {
+    return;
+  }
+
+  status.textContent = message;
+  status.className = `status${type ? ` ${type}` : ''}`;
+}
+
+async function fetchJobDataFromUrl() {
+  const urlInput = document.getElementById('job-url');
+  const fetchBtn = document.getElementById('fetch-url-btn');
+  const url = urlInput.value.trim();
+
+  if (!url) {
+    showToast('Please enter an Upwork URL', 'error');
+    setUrlFetchStatus('Paste an Upwork job URL first.', 'error');
+    return;
+  }
+
+  fetchBtn.disabled = true;
+  fetchBtn.innerHTML = '<span class="spinner"></span> Fetching...';
+  setUrlFetchStatus('Fetching job details from URL...', '');
+
+  try {
+    const result = await apiPost('/api/scrape-job-url', { url });
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Failed to fetch URL data');
+    }
+
+    const data = result.data;
+    document.getElementById('test-title').value = data.title || '';
+    document.getElementById('test-description').value = data.description || '';
+    document.getElementById('test-budget').value = data.budget || '';
+    document.getElementById('test-skills').value = data.skills || '';
+
+    lastGeneratedParams = null;
+    document.getElementById('regenerate-btn').disabled = true;
+
+    const modeLabel = data.mode === 'playwright' ? 'browser mode' : 'parser mode';
+    const warningText = Array.isArray(data.warnings) && data.warnings.length > 0
+      ? ` (${data.warnings.join('; ')})`
+      : '';
+
+    setUrlFetchStatus(`Fetched via ${modeLabel}${warningText}`, data.warnings?.length ? 'warning' : 'success');
+    showToast('Job details fetched and fields auto-filled', 'success');
+  } catch (error) {
+    const cloudflareMessage = "Couldn't fetch this URL due to page protection. Please fill fields manually and continue.";
+    if (error.code === 'SCRAPE_BLOCKED_CLOUDFLARE') {
+      setUrlFetchStatus(cloudflareMessage, 'warning');
+      showToast(cloudflareMessage, 'error');
+    } else {
+      const message = error.message || 'Failed to fetch URL data';
+      setUrlFetchStatus(message, 'error');
+      showToast(message, 'error');
+    }
+  } finally {
+    fetchBtn.disabled = false;
+    fetchBtn.textContent = fetchBtn.dataset.defaultLabel || 'Fetch Data';
+  }
+}
 
 async function generateProposal() {
   const title = document.getElementById('test-title').value.trim();

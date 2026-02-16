@@ -213,6 +213,16 @@ body {
   gap: 16px;
 }
 
+.url-fetch-row {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.url-fetch-row input {
+  flex: 1;
+}
+
 /* Buttons */
 .btn {
   padding: 12px 20px;
@@ -293,6 +303,10 @@ body {
 
 .status.error {
   color: var(--danger);
+}
+
+.status.warning {
+  color: var(--warning);
 }
 
 /* Result Container */
@@ -660,6 +674,10 @@ body {
   }
   
   .input-group {
+    flex-direction: column;
+  }
+
+  .url-fetch-row {
     flex-direction: column;
   }
   

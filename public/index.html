@@ -50,6 +50,16 @@
       <section id="tab-generator" class="tab">
         <h2>Test Proposal Generator</h2>
         <p class="khushi-note">Do you want to generate a response for Khushi Agrawal? Add the job details below and generate a client-ready draft.</p>
+
+        <div class="form-group">
+          <label for="job-url">Upwork Job URL</label>
+          <div class="url-fetch-row">
+            <input type="url" id="job-url" placeholder="https://www.upwork.com/jobs/...">
+            <button id="fetch-url-btn" class="btn btn-secondary" type="button" data-default-label="Fetch Data">Fetch Data</button>
+          </div>
+          <p class="hint">Paste an Upwork URL to auto-fill title, description, budget, and skills.</p>
+          <span id="url-fetch-status" class="status"></span>
+        </div>
         
         <div class="form-group">
           <label for="test-title">Job Title *</label>

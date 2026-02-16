@@ -38,6 +38,7 @@ npm start
 ### Public API
 - `GET /api/health` - Health check
 - `POST /api/generate-proposal` - Generate a proposal (requires authenticated session)
+- `POST /api/scrape-job-url` - Extract Upwork job details from URL (requires authenticated session)
 
 ### Auth API
 - `GET /auth/session` - Get current session state
@@ -61,7 +62,8 @@ upwork-proposal-generator/
 │   ├── database.js        # SQLite helpers
 │   └── src/
 │       └── services/
-│           └── ai.js      # GLM 5 integration
+│           ├── ai.js      # GLM integration
+│           └── scraper.js # Upwork URL extractor
 ├── public/
 │   ├── login.html         # Login page
 │   ├── index.html         # Admin dashboard

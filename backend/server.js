@@ -10,6 +10,7 @@ const cors = require('cors');
 const path = require('path');
 const db = require('./database');
 const ai = require('./src/services/ai');
+const scraper = require('./src/services/scraper');
 
 const app = express();
 const PORT = Number.parseInt(process.env.PORT, 10) || 3000;
@@ -23,6 +24,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.GLM_API_KEY;
 
 const RATE_LIMIT_WINDOW_MS = Number.parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = Number.parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || 20;
+const SCRAPER_RATE_LIMIT_WINDOW_MS = Number.parseInt(process.env.SCRAPER_RATE_LIMIT_WINDOW_MS, 10) || 60 * 1000;
+const SCRAPER_RATE_LIMIT_MAX_REQUESTS = Number.parseInt(process.env.SCRAPER_RATE_LIMIT_MAX_REQUESTS, 10) || 10;
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
@@ -31,6 +34,7 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
 
 const sessions = new Map();
 const proposalRequestBuckets = new Map();
+const scrapeRequestBuckets = new Map();
 
 // Request logging
 app.use((req, res, next) => {
@@ -167,7 +171,7 @@ function getClientIp(req) {
   return req.socket?.remoteAddress || 'unknown';
 }
 
-function pruneRateLimitBuckets() {
+function pruneProposalRateLimitBuckets() {
   const now = Date.now();
   for (const [ip, bucket] of proposalRequestBuckets.entries()) {
     if (now - bucket.windowStart > RATE_LIMIT_WINDOW_MS) {
@@ -177,7 +181,7 @@ function pruneRateLimitBuckets() {
 }
 
 function proposalRateLimit(req, res, next) {
-  pruneRateLimitBuckets();
+  pruneProposalRateLimitBuckets();
 
   const now = Date.now();
   const ip = getClientIp(req);
@@ -193,6 +197,41 @@ function proposalRateLimit(req, res, next) {
     return res.status(429).json({
       success: false,
       error: 'Rate limit exceeded. Please try again later.'
+    });
+  }
+
+  return next();
+}
+
+function pruneScrapeRateLimitBuckets() {
+  const now = Date.now();
+  for (const [ip, bucket] of scrapeRequestBuckets.entries()) {
+    if (now - bucket.windowStart > SCRAPER_RATE_LIMIT_WINDOW_MS) {
+      scrapeRequestBuckets.delete(ip);
+    }
+  }
+}
+
+function scrapeRateLimit(req, res, next) {
+  pruneScrapeRateLimitBuckets();
+
+  const now = Date.now();
+  const ip = getClientIp(req);
+  const sessionToken = req.adminSession?.token || 'anonymous';
+  const bucketKey = `${sessionToken}:${ip}`;
+  const bucket = scrapeRequestBuckets.get(bucketKey);
+
+  if (!bucket || now - bucket.windowStart > SCRAPER_RATE_LIMIT_WINDOW_MS) {
+    scrapeRequestBuckets.set(bucketKey, { count: 1, windowStart: now });
+    return next();
+  }
+
+  bucket.count += 1;
+  if (bucket.count > SCRAPER_RATE_LIMIT_MAX_REQUESTS) {
+    return res.status(429).json({
+      success: false,
+      error: 'Too many URL scrape requests. Please try again in a minute.',
+      code: scraper.SCRAPE_ERROR_CODES.SCRAPE_FAILED
     });
   }
 
@@ -311,6 +350,66 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     version: '1.1.0'
   });
+});
+
+/**
+ * Scrape Upwork job details from URL
+ */
+app.post('/api/scrape-job-url', requireAdminAuth, scrapeRateLimit, async (req, res) => {
+  const { url } = req.body || {};
+
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({
+      success: false,
+      error: 'A URL is required',
+      code: scraper.SCRAPE_ERROR_CODES.INVALID_URL
+    });
+  }
+
+  console.log('URL scrape attempt', { url });
+
+  try {
+    const data = await scraper.scrapeJobUrl(url);
+    console.log('URL scrape success', {
+      mode: data.mode,
+      warnings: Array.isArray(data.warnings) ? data.warnings.length : 0
+    });
+    return res.json({ success: true, data });
+  } catch (error) {
+    const normalizedError = scraper.normalizeScrapeError(error);
+    const code = normalizedError.code || scraper.SCRAPE_ERROR_CODES.SCRAPE_FAILED;
+
+    const statusCodeByError = {
+      [scraper.SCRAPE_ERROR_CODES.INVALID_URL]: 400,
+      [scraper.SCRAPE_ERROR_CODES.UNSUPPORTED_DOMAIN]: 400,
+      [scraper.SCRAPE_ERROR_CODES.SCRAPE_BLOCKED_CLOUDFLARE]: 422,
+      [scraper.SCRAPE_ERROR_CODES.SCRAPE_FAILED]: 500
+    };
+
+    const fallbackMessageByError = {
+      [scraper.SCRAPE_ERROR_CODES.INVALID_URL]: 'Please provide a valid Upwork URL',
+      [scraper.SCRAPE_ERROR_CODES.UNSUPPORTED_DOMAIN]: 'Only Upwork job URLs are supported in this version',
+      [scraper.SCRAPE_ERROR_CODES.SCRAPE_BLOCKED_CLOUDFLARE]: 'Could not fetch this URL due to page protection. Please fill fields manually and continue.',
+      [scraper.SCRAPE_ERROR_CODES.SCRAPE_FAILED]: 'Failed to fetch job details from this URL'
+    };
+
+    const status = statusCodeByError[code] || 500;
+    const clientError = getClientErrorMessage(
+      normalizedError,
+      fallbackMessageByError[code] || 'Failed to scrape URL'
+    );
+
+    console.error('URL scrape failed:', {
+      code,
+      message: normalizedError.message
+    });
+
+    return res.status(status).json({
+      success: false,
+      error: clientError,
+      code
+    });
+  }
 });
 
 /**
