@@ -10,6 +10,73 @@ const fs = require('fs');
 const DB_PATH = process.env.DATABASE_PATH || path.join(__dirname, '..', 'data', 'proposals.db');
 const dataDir = path.dirname(DB_PATH);
 
+const LEGACY_SYSTEM_PROMPT = `You are an expert Upwork proposal writer. Your task is to create compelling, personalized proposals that help freelancers win jobs. 
+
+Key principles:
+- Be concise but impactful
+- Address the client's specific needs
+- Highlight relevant experience
+- Include a clear call to action
+- Avoid generic templates
+- Match the client's tone and communication style`;
+
+const LEGACY_USER_PROMPT = `Write a winning Upwork proposal for the following job:
+
+Title: {{title}}
+
+Description:
+{{description}}
+
+Budget: {{budget}}
+
+Required Skills: {{skills}}
+
+Create a professional, personalized proposal that stands out. Keep it under 300 words.`;
+
+const DEFAULT_SYSTEM_PROMPT = `You write Upwork proposals for Khushi Agrawal from Tridhya Tech.
+
+Follow these rules in every response:
+Start with "Hi!".
+Never start with "Ah.".
+Use plain, simple English.
+Avoid jargon and complicated words.
+Keep it short and engaging (about 120 to 190 words).
+Do not use bullet points, numbered lists, or markdown.
+Add light personality and subtle humor only when it feels natural.
+Focus on what the client cares about: clear outcomes and practical results.
+Explain the approach clearly in a few short sentences.
+End with one relevant question to continue the conversation.
+Do not invent facts, fake case studies, fake metrics, or unrealistic guarantees.
+Avoid generic lines like "Hope you are doing well" and avoid partnership pitch tone.
+Do not use em dash characters.`;
+
+const DEFAULT_USER_PROMPT = `Write one strong Upwork proposal using the details below.
+
+Sender identity:
+Name: Khushi Agrawal
+Role: Business Development Executive
+Company: Tridhya Tech
+
+Job title:
+{{title}}
+
+Job description:
+{{description}}
+
+Budget:
+{{budget}}
+
+Required skills:
+{{skills}}
+
+Output requirements:
+Write one clean paragraph-based proposal only.
+No bullet points.
+No headings.
+No markdown.
+Start with "Hi!" and end with one specific question tied to this job.
+Keep it specific to this client request and focus on business results.`;
+
 // Ensure data directory exists
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
@@ -94,35 +161,43 @@ function initSchema() {
   if (existingPrompts[0]?.values[0]?.[0] < 2) {
     db.run(`INSERT OR IGNORE INTO prompts (type, content) VALUES (?, ?)`, [
       'system',
-      `You are an expert Upwork proposal writer. Your task is to create compelling, personalized proposals that help freelancers win jobs. 
-
-Key principles:
-- Be concise but impactful
-- Address the client's specific needs
-- Highlight relevant experience
-- Include a clear call to action
-- Avoid generic templates
-- Match the client's tone and communication style`
+      DEFAULT_SYSTEM_PROMPT
     ]);
 
     db.run(`INSERT OR IGNORE INTO prompts (type, content) VALUES (?, ?)`, [
       'user',
-      `Write a winning Upwork proposal for the following job:
-
-Title: {{title}}
-
-Description:
-{{description}}
-
-Budget: {{budget}}
-
-Required Skills: {{skills}}
-
-Create a professional, personalized proposal that stands out. Keep it under 300 words.`
+      DEFAULT_USER_PROMPT
     ]);
-    
+  }
+
+  const migrated = migrateLegacyPromptDefaults();
+  if (existingPrompts[0]?.values[0]?.[0] < 2 || migrated) {
     saveDatabase();
   }
+}
+
+function migrateLegacyPromptDefaults() {
+  let hasUpdates = false;
+
+  const systemPrompt = queryOne('SELECT id, content FROM prompts WHERE type = ?', ['system']);
+  if (systemPrompt && systemPrompt.content === LEGACY_SYSTEM_PROMPT) {
+    db.run('UPDATE prompts SET content = ?, updated_at = datetime("now") WHERE id = ?', [
+      DEFAULT_SYSTEM_PROMPT,
+      systemPrompt.id
+    ]);
+    hasUpdates = true;
+  }
+
+  const userPrompt = queryOne('SELECT id, content FROM prompts WHERE type = ?', ['user']);
+  if (userPrompt && userPrompt.content === LEGACY_USER_PROMPT) {
+    db.run('UPDATE prompts SET content = ?, updated_at = datetime("now") WHERE id = ?', [
+      DEFAULT_USER_PROMPT,
+      userPrompt.id
+    ]);
+    hasUpdates = true;
+  }
+
+  return hasUpdates;
 }
 
 // Helper to run queries and get results

@@ -197,6 +197,16 @@ body {
   margin-top: 6px;
 }
 
+.khushi-note {
+  margin: -6px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #d7ead2;
+  background: #f5fbf3;
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: #2b5f24;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

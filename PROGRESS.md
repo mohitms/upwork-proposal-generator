@@ -35,6 +35,8 @@
 - [x] Switch endpoint to `https://api.z.ai/api/paas/v4/chat/completions`
 - [x] Add optional thinking config (`GLM_THINKING_TYPE`)
 - [x] Update environment docs (`.env.example`, `README.md`)
+- [x] Revamp default proposal prompts for stronger plain-English responses
+- [x] Add safe migration to replace legacy default prompts automatically
 
 ---
 
@@ -47,6 +49,7 @@
 - [x] Add API key management API/UI
 - [x] Add usage stats API/UI
 - [x] Add login page (`public/login.html`) and login logic (`public/login.js`)
+- [x] Add Khushi-specific guidance copy in proposal generator tab
 
 ---
 
@@ -88,4 +91,5 @@
 - [ ] Ensure VPS `.env` includes the new vars above
 - [ ] Restart PM2 with updated env
 - [ ] Verify login flow + proposal generation on production
+- [ ] Tune prompts further based on real proposal acceptance feedback
 - [ ] Rotate API key if needed

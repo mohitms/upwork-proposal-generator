@@ -256,7 +256,7 @@ async function generateProposal() {
     regenBtn.disabled = true;
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Generate Proposal';
+    btn.textContent = btn.dataset.defaultLabel || 'Generate Proposal';
   }
 }
 
