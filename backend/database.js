@@ -128,8 +128,9 @@ Create a professional, personalized proposal that stands out. Keep it under 300 
 // Helper to run queries and get results
 function queryAll(sql, params = []) {
   const stmt = db.prepare(sql);
-  if (params.length > 0) {
-    stmt.bind(params);
+  const normalizedParams = normalizeParams(params);
+  if (normalizedParams.length > 0) {
+    stmt.bind(normalizedParams);
   }
   
   const results = [];
@@ -146,8 +147,12 @@ function queryOne(sql, params = []) {
   return results.length > 0 ? results[0] : null;
 }
 
+function normalizeParams(params = []) {
+  return params.map((value) => (value === undefined ? null : value));
+}
+
 function runSql(sql, params = []) {
-  db.run(sql, params);
+  db.run(sql, normalizeParams(params));
   saveDatabase();
   return { changes: db.getRowsModified() };
 }
@@ -156,6 +161,10 @@ function runSql(sql, params = []) {
 const apiKeys = {
   get: (provider) => {
     return queryOne('SELECT * FROM api_keys WHERE provider = ?', [provider]);
+  },
+
+  getActive: (provider) => {
+    return queryOne('SELECT * FROM api_keys WHERE provider = ? AND is_active = 1', [provider]);
   },
   
   getAll: () => {
@@ -217,12 +226,12 @@ const logs = {
       INSERT INTO request_logs (project_title, description, budget, skills, generated_proposal, ai_model, success, error)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      data.project_title,
-      data.description,
-      data.budget,
-      data.skills,
-      data.generated_proposal,
-      data.ai_model,
+      data.project_title ?? null,
+      data.description ?? null,
+      data.budget ?? null,
+      data.skills ?? null,
+      data.generated_proposal ?? null,
+      data.ai_model ?? null,
       data.success ? 1 : 0,
       data.error || null
     ]);
@@ -259,6 +268,10 @@ const logs = {
   
   getById: (id) => {
     return queryOne('SELECT * FROM request_logs WHERE id = ?', [id]);
+  },
+
+  deleteById: (id) => {
+    return runSql('DELETE FROM request_logs WHERE id = ?', [id]);
   },
   
   getStats: () => {

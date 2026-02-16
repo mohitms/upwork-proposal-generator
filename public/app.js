@@ -14,7 +14,12 @@ let lastGeneratedParams = null;
 // Initialization
 // ============================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  const authenticated = await ensureAuthenticated();
+  if (!authenticated) {
+    return;
+  }
+
   initTabs();
   loadPrompts();
   loadStats();
@@ -29,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('refresh-logs').addEventListener('click', loadLogs);
   document.getElementById('update-key').addEventListener('click', updateApiKey);
   document.getElementById('log-filter').addEventListener('change', loadLogs);
+  document.getElementById('logout-btn').addEventListener('click', logout);
 });
 
 // ============================================
@@ -73,7 +79,7 @@ function switchTab(tab) {
 
 async function apiGet(endpoint) {
   const response = await fetch(`${API_BASE}${endpoint}`);
-  return response.json();
+  return parseApiResponse(response);
 }
 
 async function apiPost(endpoint, data) {
@@ -82,7 +88,7 @@ async function apiPost(endpoint, data) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
-  return response.json();
+  return parseApiResponse(response);
 }
 
 async function apiPut(endpoint, data) {
@@ -91,7 +97,57 @@ async function apiPut(endpoint, data) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
-  return response.json();
+  return parseApiResponse(response);
+}
+
+async function parseApiResponse(response) {
+  let data = {};
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
+  }
+
+  if (!response.ok) {
+    const error = new Error(data.error || `Request failed (${response.status})`);
+    error.status = response.status;
+    if (response.status === 401) {
+      window.location.href = '/login';
+    }
+    throw error;
+  }
+
+  return data;
+}
+
+async function ensureAuthenticated() {
+  try {
+    const session = await apiGet('/auth/session');
+    if (!session.authenticated) {
+      window.location.href = '/login';
+      return false;
+    }
+
+    const userBadge = document.getElementById('auth-user');
+    if (userBadge) {
+      userBadge.textContent = session.username || 'admin';
+    }
+
+    return true;
+  } catch (error) {
+    window.location.href = '/login';
+    return false;
+  }
+}
+
+async function logout() {
+  try {
+    await apiPost('/auth/logout', {});
+  } catch (error) {
+    console.error('Logout failed:', error);
+  } finally {
+    window.location.href = '/login';
+  }
 }
 
 // ============================================

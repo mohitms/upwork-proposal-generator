@@ -16,10 +16,11 @@ const GLM_MODEL = 'glm-5';
  * @param {string} params.skills - Required skills
  * @param {string} params.systemPrompt - System prompt
  * @param {string} params.userPromptTemplate - User prompt template
+ * @param {string} params.apiKey - Provider API key
  * @returns {Promise<{proposal: string, model: string}>}
  */
 async function generateProposal(params) {
-  const { title, description, budget, skills, systemPrompt, userPromptTemplate } = params;
+  const { title, description, budget, skills, systemPrompt, userPromptTemplate, apiKey } = params;
   
   // Replace placeholders in user prompt
   const userPrompt = userPromptTemplate
@@ -28,9 +29,9 @@ async function generateProposal(params) {
     .replace(/\{\{budget\}\}/g, budget || 'Not specified')
     .replace(/\{\{skills\}\}/g, skills || 'Not specified');
 
-  const apiKey = process.env.GLM_API_KEY;
+  const resolvedApiKey = apiKey || process.env.GLM_API_KEY;
   
-  if (!apiKey) {
+  if (!resolvedApiKey) {
     throw new Error('GLM_API_KEY not configured in environment');
   }
 
@@ -46,7 +47,7 @@ async function generateProposal(params) {
       top_p: 0.9
     }, {
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${resolvedApiKey}`,
         'Content-Type': 'application/json'
       },
       timeout: 60000 // 60 second timeout
@@ -94,12 +95,13 @@ async function generateProposal(params) {
 
 /**
  * Test API connection
+ * @param {string} [apiKey]
  * @returns {Promise<boolean>}
  */
-async function testConnection() {
+async function testConnection(apiKey) {
   try {
-    const apiKey = process.env.GLM_API_KEY;
-    if (!apiKey) {
+    const resolvedApiKey = apiKey || process.env.GLM_API_KEY;
+    if (!resolvedApiKey) {
       return false;
     }
     
@@ -112,7 +114,7 @@ async function testConnection() {
       max_tokens: 5
     }, {
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${resolvedApiKey}`,
         'Content-Type': 'application/json'
       },
       timeout: 10000

@@ -10,7 +10,13 @@
   <div class="app">
     <!-- Header -->
     <header class="header">
-      <h1>📝 Proposal Generator</h1>
+      <div class="header-top">
+        <h1>📝 Proposal Generator</h1>
+        <div class="header-actions">
+          <span id="auth-user" class="user-badge"></span>
+          <button id="logout-btn" class="btn btn-secondary btn-sm">Logout</button>
+        </div>
+      </div>
       <nav class="nav">
         <button class="nav-btn active" data-tab="prompts">Prompts</button>
         <button class="nav-btn" data-tab="generator">Test</button>

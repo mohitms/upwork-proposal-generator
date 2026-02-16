@@ -6,6 +6,7 @@ AI-powered proposal generator for Upwork freelancers using GLM 5 (Z.AI).
 
 - 🤖 AI-powered proposal generation using GLM 5
 - 📊 Admin dashboard for managing prompts and viewing logs
+- 🔐 Login-protected dashboard and admin APIs
 - 🧪 Built-in test UI for generating proposals
 - 📱 Mobile-friendly interface
 - 🔐 Secure API key management
@@ -13,7 +14,7 @@ AI-powered proposal generator for Upwork freelancers using GLM 5 (Z.AI).
 ## Tech Stack
 
 - **Backend**: Node.js + Express
-- **Database**: SQLite (better-sqlite3)
+- **Database**: SQLite (sql.js)
 - **AI**: GLM 5 via Z.AI API
 - **Frontend**: Vanilla HTML/CSS/JS
 
@@ -25,7 +26,7 @@ npm install
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your API key
+# Edit .env with your API key + admin credentials
 
 # Start server
 npm start
@@ -35,7 +36,12 @@ npm start
 
 ### Public API
 - `GET /api/health` - Health check
-- `POST /api/generate-proposal` - Generate a proposal
+- `POST /api/generate-proposal` - Generate a proposal (requires authenticated session)
+
+### Auth API
+- `GET /auth/session` - Get current session state
+- `POST /auth/login` - Login with admin username/password
+- `POST /auth/logout` - Logout current session
 
 ### Admin API
 - `GET /admin/api/prompts` - Get all prompts
@@ -56,9 +62,11 @@ upwork-proposal-generator/
 │       └── services/
 │           └── ai.js      # GLM 5 integration
 ├── public/
+│   ├── login.html         # Login page
 │   ├── index.html         # Admin dashboard
 │   ├── style.css          # Styles
-│   └── app.js             # Dashboard logic
+│   ├── app.js             # Dashboard logic
+│   └── login.js           # Login logic
 ├── extension/             # Browser extension (future)
 ├── package.json
 ├── .env.example
