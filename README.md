@@ -67,7 +67,35 @@ upwork-proposal-generator/
 
 ## Deployment
 
-Designed for lightweight deployment on Hetzner CX23 (2 vCPU, 4GB RAM).
+Deployed on Hetzner CX23 (2 vCPU, 4GB RAM).
+
+**Live Dashboard:** http://46.225.52.33:3000
+
+**Admin Tabs:**
+- **Prompts** - Edit system and user prompts
+- **Logs** - View all generated proposals
+- **Settings** - Manage API keys
+- **Test Generator** - Try it out!
+
+## Production Setup
+
+```bash
+# Start with PM2
+pm2 start ecosystem.config.js
+
+# Save PM2 configuration
+pm2 save
+
+# Auto-start on reboot
+pm2 startup
+```
+
+## Chrome Extension (Coming Soon)
+
+The Chrome extension will allow you to:
+- Scrape Upwork project pages
+- Generate proposals with one click
+- Copy proposals directly to clipboard
 
 ## License
 
