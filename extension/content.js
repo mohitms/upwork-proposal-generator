@@ -96,19 +96,18 @@
 
   function scrapeJobAndClientData() {
     const titleSelectors = [
-      '[data-test="job-title"]',
-      '[data-test="up-job-title"]',
-      '[data-testid="job-title"]',
-      '[data-qa="job-title"]',
+      'h1[class*="title"]',
+      'h1[data-test*="title"]',
+      'h1[data-test="job-title"]',
+      'h1.air3-section-title',
+      '.job-details-header h1',
       'header h1',
-      'main h1',
-      'article h1',
-      '.job-details-title',
-      '.air3-card-section h1',
-      'h1'
+      '.air3-card-header h1',
+      '[role="heading"][aria-level="1"]'
     ];
     const titleResult = firstTextWithMeta(titleSelectors);
-    const title = titleResult.text;
+    const fallbackH1Result = titleResult.text ? { text: '', selector: '' } : bestEffortH1Title();
+    const title = titleResult.text || fallbackH1Result.text;
 
     const description = firstText([
       '[data-test="job-description-text"]',
@@ -208,8 +207,9 @@
 
     console.debug('[UPG] Title scrape:', {
       value: title,
-      selector: titleResult.selector,
-      tried: titleSelectors
+      selector: titleResult.selector || fallbackH1Result.selector,
+      tried: titleSelectors,
+      fallbackUsed: Boolean(!titleResult.text && fallbackH1Result.text)
     });
     console.debug('[UPG] Budget scrape:', {
       value: budget,
@@ -269,6 +269,19 @@
       const text = normalizeText(preserveLineBreaks ? el.innerText : el.textContent, preserveLineBreaks);
       if (text) return { text, selector };
     }
+    return { text: '', selector: '' };
+  }
+
+  function bestEffortH1Title(minLength = 10) {
+    const h1s = Array.from(document.querySelectorAll('h1'));
+
+    for (const h1 of h1s) {
+      const text = normalizeText(h1.textContent);
+      if (text && text.length > minLength) {
+        return { text, selector: `h1[fallback:length>${minLength}]` };
+      }
+    }
+
     return { text: '', selector: '' };
   }
 

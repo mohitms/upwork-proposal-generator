@@ -2,6 +2,14 @@
 
 All notable changes to the Chrome extension will be documented here.
 
+## [1.0.2] - 2026-02-17
+
+### Fixed
+- 🔧 **Critical fix:** Job title now captures correctly with updated Upwork selectors
+- Added 8+ fallback selector patterns for title extraction
+- Added smart h1 fallback (finds any h1 with >10 chars as last resort)
+- Better debug logging shows which selector captured the title
+
 ## [1.0.1] - 2026-02-17
 
 ### Fixed
