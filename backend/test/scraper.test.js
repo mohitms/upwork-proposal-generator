@@ -15,6 +15,11 @@ test('validateUpworkUrl accepts supported Upwork https URL', () => {
   assert.equal(url, 'https://www.upwork.com/jobs/~0123456789');
 });
 
+test('validateUpworkUrl strips hash fragments', () => {
+  const url = scraper.validateUpworkUrl('https://www.upwork.com/jobs/~0123456789#fragment');
+  assert.equal(url, 'https://www.upwork.com/jobs/~0123456789');
+});
+
 test('validateUpworkUrl rejects invalid format', () => {
   assert.throws(
     () => scraper.validateUpworkUrl('not-a-url'),
@@ -32,6 +37,13 @@ test('validateUpworkUrl rejects non-https URL', () => {
 test('validateUpworkUrl rejects unsupported domains', () => {
   assert.throws(
     () => scraper.validateUpworkUrl('https://example.com/jobs/abc'),
+    (error) => error.code === scraper.SCRAPE_ERROR_CODES.UNSUPPORTED_DOMAIN
+  );
+});
+
+test('assertAllowedUpworkHost rejects redirected non-upwork hosts', () => {
+  assert.throws(
+    () => scraper.__test.assertAllowedUpworkHost('https://malicious.example/path'),
     (error) => error.code === scraper.SCRAPE_ERROR_CODES.UNSUPPORTED_DOMAIN
   );
 });

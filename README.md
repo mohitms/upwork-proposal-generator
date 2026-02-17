@@ -27,6 +27,7 @@ npm install
 # Configure environment
 cp .env.example .env
 # Edit .env with your API key + admin credentials
+# Ensure ADMIN_PASSWORD is a strong unique value (required at startup)
 # Optional: set GLM_MODEL to glm-4.7 or glm-5
 
 # Start server
@@ -70,7 +71,6 @@ upwork-proposal-generator/
 │   ├── style.css          # Styles
 │   ├── app.js             # Dashboard logic
 │   └── login.js           # Login logic
-├── extension/             # Browser extension (future)
 ├── package.json
 ├── .env.example
 └── README.md
@@ -91,6 +91,9 @@ Deployed on Hetzner CX23 (2 vCPU, 4GB RAM).
 ## Production Setup
 
 ```bash
+# Install Chromium for Playwright scraping
+npx playwright install chromium
+
 # Start with PM2
 pm2 start ecosystem.config.js
 
@@ -100,6 +103,12 @@ pm2 save
 # Auto-start on reboot
 pm2 startup
 ```
+
+## Production Env Notes
+
+- Set `ADMIN_PASSWORD` explicitly; the server will refuse to boot without it.
+- Set `TRUST_PROXY=true` when running behind Nginx/Cloudflare so IP-based rate limits work correctly.
+- Tune auth throttle with `AUTH_RATE_LIMIT_WINDOW_MS` and `AUTH_RATE_LIMIT_MAX_ATTEMPTS`.
 
 ## Chrome Extension (Coming Soon)
 

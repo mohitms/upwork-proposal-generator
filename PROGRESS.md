@@ -5,7 +5,7 @@
 - **Target**: Hetzner CX23 (2 vCPU, 4GB RAM)
 - **Repo**: github.com/mohitms/upwork-proposal-generator
 - **Live URL**: https://upwork.webxhosts.in
-- **Last Updated**: 2026-02-16
+- **Last Updated**: 2026-02-17
 
 ---
 
@@ -94,12 +94,32 @@
 
 ---
 
+## PHASE 7: Production Hardening + Cleanup
+**Status**: ✅ Complete (2026-02-17)
+
+- [x] Remove insecure admin-password fallback to API key
+- [x] Enforce explicit non-placeholder `ADMIN_PASSWORD` at startup
+- [x] Add login brute-force rate limiting
+- [x] Add security response headers (`nosniff`, frame policy, referrer policy)
+- [x] Improve proxy-aware client IP detection via Express trust proxy
+- [x] Make CORS rejection non-throwing (avoid 500 on disallowed origins)
+- [x] Harden cookie parsing for malformed cookie values
+- [x] Restrict API key updates to provider `glm` only
+- [x] Harden scraper against redirect domain pivots
+- [x] Validate parser fallback content type and final URL host
+- [x] Remove unused AI connection-test code
+- [x] Scope test script to backend tests only
+- [x] Update env and README production notes
+
+---
+
 ## Current Runtime Config (Env)
 - `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_TTL_MS`
 - `GLM_API_KEY`, `GLM_MODEL`, `GLM_API_URL`, `GLM_THINKING_TYPE`
 - `ALLOWED_ORIGINS`, `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX_REQUESTS`
 - `SCRAPER_RATE_LIMIT_WINDOW_MS`, `SCRAPER_RATE_LIMIT_MAX_REQUESTS`
 - `SCRAPER_NAV_TIMEOUT_MS`, `SCRAPER_CHALLENGE_WAIT_MS`, `SCRAPER_ENABLE_PARSER_FALLBACK`
+- `TRUST_PROXY`, `AUTH_RATE_LIMIT_WINDOW_MS`, `AUTH_RATE_LIMIT_MAX_ATTEMPTS`
 - `DATABASE_PATH`
 
 ---

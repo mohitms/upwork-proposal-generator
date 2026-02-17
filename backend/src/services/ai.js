@@ -110,44 +110,7 @@ async function generateProposal(params) {
   }
 }
 
-/**
- * Test API connection
- * @param {string} [apiKey]
- * @returns {Promise<boolean>}
- */
-async function testConnection(apiKey) {
-  try {
-    const resolvedApiKey = apiKey || process.env.GLM_API_KEY;
-    if (!resolvedApiKey) {
-      return false;
-    }
-    
-    // Simple test with minimal tokens
-    await axios.post(GLM_API_URL, buildRequestPayload({
-      model: GLM_MODEL,
-      messages: [
-        { role: 'user', content: 'Say "ok"' }
-      ],
-      temperature: 0,
-      maxTokens: 5,
-      topP: 1
-    }), {
-      headers: {
-        'Authorization': `Bearer ${resolvedApiKey}`,
-        'Content-Type': 'application/json'
-      },
-      timeout: 10000
-    });
-    
-    return true;
-  } catch (error) {
-    console.error('API connection test failed:', error.message);
-    return false;
-  }
-}
-
 module.exports = {
   generateProposal,
-  testConnection,
   GLM_MODEL
 };

@@ -47,6 +47,23 @@ function getChromium() {
   return cachedChromium;
 }
 
+function isAllowedUpworkHost(hostname) {
+  return ALLOWED_UPWORK_HOSTS.has(String(hostname || '').toLowerCase());
+}
+
+function assertAllowedUpworkHost(urlValue) {
+  let parsed;
+  try {
+    parsed = new URL(urlValue);
+  } catch {
+    throw new ScrapeError(SCRAPE_ERROR_CODES.INVALID_URL, 'Invalid URL format');
+  }
+
+  if (!isAllowedUpworkHost(parsed.hostname)) {
+    throw new ScrapeError(SCRAPE_ERROR_CODES.UNSUPPORTED_DOMAIN, 'Only Upwork job URLs are supported in this version');
+  }
+}
+
 function validateUpworkUrl(inputUrl) {
   if (typeof inputUrl !== 'string' || !inputUrl.trim()) {
     throw new ScrapeError(SCRAPE_ERROR_CODES.INVALID_URL, 'A valid URL is required');
@@ -63,9 +80,7 @@ function validateUpworkUrl(inputUrl) {
     throw new ScrapeError(SCRAPE_ERROR_CODES.INVALID_URL, 'Only HTTPS URLs are supported');
   }
 
-  if (!ALLOWED_UPWORK_HOSTS.has(parsed.hostname.toLowerCase())) {
-    throw new ScrapeError(SCRAPE_ERROR_CODES.UNSUPPORTED_DOMAIN, 'Only Upwork job URLs are supported in this version');
-  }
+  assertAllowedUpworkHost(parsed.toString());
 
   parsed.hash = '';
   return parsed.toString();
@@ -308,6 +323,7 @@ async function scrapeWithPlaywright(url) {
     }
 
     const finalUrl = page.url();
+    assertAllowedUpworkHost(finalUrl);
     const html = await page.content();
     return extractFromHtml(html, finalUrl, 'playwright');
   } finally {
@@ -324,11 +340,23 @@ async function scrapeWithPlaywright(url) {
 async function scrapeWithParser(url) {
   const response = await axios.get(url, {
     timeout: NAVIGATION_TIMEOUT_MS,
+    maxRedirects: 3,
     headers: {
       'User-Agent': DEFAULT_USER_AGENT,
       'Accept-Language': 'en-US,en;q=0.9'
     }
   });
+
+  const finalUrl = response.request?.res?.responseUrl || response.config?.url || url;
+  assertAllowedUpworkHost(finalUrl);
+
+  const contentType = String(response.headers?.['content-type'] || '').toLowerCase();
+  if (contentType && !contentType.includes('text/html')) {
+    throw new ScrapeError(
+      SCRAPE_ERROR_CODES.SCRAPE_FAILED,
+      'Could not extract job details from non-HTML response'
+    );
+  }
 
   if (detectCloudflareFromHtml(response.data)) {
     throw new ScrapeError(
@@ -337,7 +365,7 @@ async function scrapeWithParser(url) {
     );
   }
 
-  const data = extractFromHtml(response.data, url, 'parser');
+  const data = extractFromHtml(response.data, finalUrl, 'parser');
   data.warnings = uniqueNonEmpty([
     ...data.warnings,
     'Used parser fallback extraction mode'
@@ -388,6 +416,8 @@ module.exports = {
   validateUpworkUrl,
   normalizeScrapeError,
   __test: {
+    isAllowedUpworkHost,
+    assertAllowedUpworkHost,
     normalizeWhitespace,
     extractBudgetFromText,
     extractSkillsFromText,

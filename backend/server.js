@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { version: APP_VERSION } = require('../package.json');
 const db = require('./database');
 const ai = require('./src/services/ai');
 const scraper = require('./src/services/scraper');
@@ -20,12 +21,15 @@ const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const SESSION_COOKIE_NAME = 'upwork_admin_session';
 const SESSION_TTL_MS = Number.parseInt(process.env.SESSION_TTL_MS, 10) || 24 * 60 * 60 * 1000;
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.GLM_API_KEY;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const TRUST_PROXY = process.env.TRUST_PROXY;
 
 const RATE_LIMIT_WINDOW_MS = Number.parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = Number.parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || 20;
 const SCRAPER_RATE_LIMIT_WINDOW_MS = Number.parseInt(process.env.SCRAPER_RATE_LIMIT_WINDOW_MS, 10) || 60 * 1000;
 const SCRAPER_RATE_LIMIT_MAX_REQUESTS = Number.parseInt(process.env.SCRAPER_RATE_LIMIT_MAX_REQUESTS, 10) || 10;
+const AUTH_RATE_LIMIT_WINDOW_MS = Number.parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS, 10) || 10 * 60 * 1000;
+const AUTH_RATE_LIMIT_MAX_ATTEMPTS = Number.parseInt(process.env.AUTH_RATE_LIMIT_MAX_ATTEMPTS, 10) || 12;
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
@@ -35,10 +39,29 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
 const sessions = new Map();
 const proposalRequestBuckets = new Map();
 const scrapeRequestBuckets = new Map();
+const authAttemptBuckets = new Map();
+
+app.disable('x-powered-by');
+if (TRUST_PROXY === 'true') {
+  app.set('trust proxy', true);
+} else if (TRUST_PROXY === 'false') {
+  app.set('trust proxy', false);
+} else if (TRUST_PROXY) {
+  app.set('trust proxy', TRUST_PROXY);
+} else if (IS_PRODUCTION) {
+  app.set('trust proxy', 1);
+}
 
 // Request logging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
+  next();
+});
+
+app.use((req, res, next) => {
+  res.setHeader('Referrer-Policy', 'same-origin');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   next();
 });
 
@@ -51,14 +74,10 @@ app.use(cors({
     }
 
     if (allowedOrigins.length === 0) {
-      return callback(new Error('CORS not allowed'));
+      return callback(null, false);
     }
 
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    return callback(new Error('CORS not allowed'));
+    return callback(null, allowedOrigins.includes(origin));
   },
   credentials: true
 }));
@@ -75,7 +94,14 @@ function parseCookies(req) {
     if (!key) {
       return cookies;
     }
-    cookies[key] = decodeURIComponent(rest.join('='));
+
+    const rawValue = rest.join('=');
+    try {
+      cookies[key] = decodeURIComponent(rawValue);
+    } catch {
+      cookies[key] = rawValue;
+    }
+
     return cookies;
   }, {});
 }
@@ -163,12 +189,18 @@ function requireDashboardAuth(req, res, next) {
 }
 
 function getClientIp(req) {
-  const forwardedFor = req.headers['x-forwarded-for'];
-  if (typeof forwardedFor === 'string' && forwardedFor.trim()) {
-    return forwardedFor.split(',')[0].trim();
+  return req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
+function secureStringEquals(expected, provided) {
+  const expectedBuffer = Buffer.from(String(expected ?? ''));
+  const providedBuffer = Buffer.from(String(provided ?? ''));
+
+  if (expectedBuffer.length !== providedBuffer.length) {
+    return false;
   }
 
-  return req.socket?.remoteAddress || 'unknown';
+  return crypto.timingSafeEqual(expectedBuffer, providedBuffer);
 }
 
 function pruneProposalRateLimitBuckets() {
@@ -238,6 +270,38 @@ function scrapeRateLimit(req, res, next) {
   return next();
 }
 
+function pruneAuthRateLimitBuckets() {
+  const now = Date.now();
+  for (const [ip, bucket] of authAttemptBuckets.entries()) {
+    if (now - bucket.windowStart > AUTH_RATE_LIMIT_WINDOW_MS) {
+      authAttemptBuckets.delete(ip);
+    }
+  }
+}
+
+function authLoginRateLimit(req, res, next) {
+  pruneAuthRateLimitBuckets();
+
+  const now = Date.now();
+  const ip = getClientIp(req);
+  const bucket = authAttemptBuckets.get(ip);
+
+  if (!bucket || now - bucket.windowStart > AUTH_RATE_LIMIT_WINDOW_MS) {
+    authAttemptBuckets.set(ip, { count: 1, windowStart: now });
+    return next();
+  }
+
+  bucket.count += 1;
+  if (bucket.count > AUTH_RATE_LIMIT_MAX_ATTEMPTS) {
+    return res.status(429).json({
+      success: false,
+      error: 'Too many login attempts. Please try again later.'
+    });
+  }
+
+  return next();
+}
+
 function getClientErrorMessage(error, fallbackMessage) {
   if (!IS_PRODUCTION && error?.message) {
     return error.message;
@@ -296,19 +360,18 @@ app.get('/auth/session', (req, res) => {
   });
 });
 
-app.post('/auth/login', (req, res) => {
+app.post('/auth/login', authLoginRateLimit, (req, res) => {
   const { username, password } = req.body || {};
+  const normalizedUsername = String(username || '').trim();
 
-  if (!ADMIN_PASSWORD) {
-    return res.status(503).json({
-      success: false,
-      error: 'Admin password is not configured on server'
-    });
-  }
-
-  if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
+  if (
+    !secureStringEquals(ADMIN_USERNAME, normalizedUsername) ||
+    !secureStringEquals(ADMIN_PASSWORD, password || '')
+  ) {
     return res.status(401).json({ success: false, error: 'Invalid credentials' });
   }
+
+  authAttemptBuckets.delete(getClientIp(req));
 
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = Date.now() + SESSION_TTL_MS;
@@ -348,7 +411,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    version: '1.1.0'
+    version: APP_VERSION
   });
 });
 
@@ -630,11 +693,11 @@ app.post('/admin/api/keys', (req, res) => {
   try {
     const { provider, key } = req.body || {};
 
-    if (!provider || !key) {
-      return res.status(400).json({ success: false, error: 'provider and key are required' });
+    if (provider !== 'glm' || typeof key !== 'string' || !key.trim()) {
+      return res.status(400).json({ success: false, error: 'Only provider \"glm\" with a non-empty key is supported' });
     }
 
-    db.apiKeys.upsert(provider, key);
+    db.apiKeys.upsert(provider, key.trim());
     return res.json({ success: true, message: 'API key updated successfully' });
   } catch (error) {
     console.error('Error updating key:', error);
@@ -710,8 +773,12 @@ async function startServer() {
     // Initialize database first
     await db.initDatabase();
 
-    if (!process.env.ADMIN_PASSWORD) {
-      console.warn('⚠️ ADMIN_PASSWORD is not set. Falling back to GLM_API_KEY for admin login password.');
+    if (!ADMIN_PASSWORD) {
+      throw new Error('ADMIN_PASSWORD is required. Refusing to start without explicit admin credentials.');
+    }
+
+    if (ADMIN_PASSWORD === 'change_this_to_strong_password') {
+      throw new Error('ADMIN_PASSWORD is using a default placeholder. Set a strong unique password before starting.');
     }
 
     if (allowedOrigins.length === 0) {
@@ -729,6 +796,9 @@ async function startServer() {
   }
 }
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
 
 module.exports = app;
+module.exports.startServer = startServer;
