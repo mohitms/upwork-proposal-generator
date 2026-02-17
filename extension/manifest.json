@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "Upwork Proposal Generator",
+  "description": "Generate tailored proposals from Upwork job posts in one click.",
+  "version": "1.0.0",
+  "minimum_chrome_version": "114",
+  "update_url": "https://upwork.webxhosts.in/extension/updates.xml",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "https://upwork.webxhosts.in/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.upwork.com/jobs/*",
+        "https://www.upwork.com/job/*",
+        "https://upwork.com/jobs/*",
+        "https://upwork.com/job/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "popup.html",
+        "popup.js",
+        "popup.css",
+        "icons/*"
+      ],
+      "matches": [
+        "https://www.upwork.com/*",
+        "https://upwork.com/*"
+      ]
+    }
+  ]
+}

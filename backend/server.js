@@ -568,6 +568,147 @@ app.post('/api/generate-proposal', requireAdminAuth, proposalRateLimit, async (r
 // ADMIN API ROUTES
 // ============================================
 
+// ============================================
+// EXTENSION API (no auth required - uses simple token validation)
+// ============================================
+
+const EXTENSION_RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const EXTENSION_RATE_LIMIT_MAX_REQUESTS = 10;
+const extensionRequestBuckets = new Map();
+
+function extensionRateLimit(req, res, next) {
+  const now = Date.now();
+  const ip = getClientIp(req);
+  const bucket = extensionRequestBuckets.get(ip);
+
+  // Prune old buckets
+  for (const [key, b] of extensionRequestBuckets.entries()) {
+    if (now - b.windowStart > EXTENSION_RATE_LIMIT_WINDOW_MS) {
+      extensionRequestBuckets.delete(key);
+    }
+  }
+
+  if (!bucket || now - bucket.windowStart > EXTENSION_RATE_LIMIT_WINDOW_MS) {
+    extensionRequestBuckets.set(ip, { count: 1, windowStart: now });
+    return next();
+  }
+
+  bucket.count += 1;
+  if (bucket.count > EXTENSION_RATE_LIMIT_MAX_REQUESTS) {
+    return res.status(429).json({
+      success: false,
+      error: 'Rate limit exceeded. Please wait before generating more proposals.'
+    });
+  }
+
+  return next();
+}
+
+/**
+ * Extension generate proposal endpoint
+ * Receives scraped data from Chrome extension, logs it, generates proposal
+ */
+app.post('/api/extension/generate', extensionRateLimit, async (req, res) => {
+  try {
+    const { job, client } = req.body;
+
+    if (!job || !job.title || !job.description) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required job data (title, description)'
+      });
+    }
+
+    console.log('Extension request received:', {
+      jobTitle: job.title,
+      clientName: client?.name || 'Unknown',
+      paymentVerified: client?.paymentVerified || false
+    });
+
+    // Get the API key
+    const apiKey = getApiKeyForProvider('glm');
+    if (!apiKey) {
+      return res.status(500).json({
+        success: false,
+        error: 'AI service not configured'
+      });
+    }
+
+    // Get prompts
+    const prompts = db.prompts.getAll();
+    const systemPrompt = prompts.find(p => p.id === 'system')?.content || '';
+    const userPromptTemplate = prompts.find(p => p.id === 'user')?.content || '';
+
+    // Build the user prompt with job data
+    let userPrompt = userPromptTemplate
+      .replace('{{title}}', job.title || 'N/A')
+      .replace('{{description}}', job.description || 'N/A')
+      .replace('{{budget}}', job.budget || 'Not specified')
+      .replace('{{skills}}', (job.skills || []).join(', ') || 'None specified');
+
+    // Generate proposal
+    const result = await ai.generateProposal({
+      apiKey,
+      systemPrompt,
+      userPrompt,
+      model: process.env.GLM_MODEL || 'glm-4.7-flash',
+      apiUrl: process.env.GLM_API_URL,
+      thinkingType: process.env.GLM_THINKING_TYPE || 'disabled'
+    });
+
+    // Log the request
+    const logEntry = {
+      project_title: job.title,
+      description: job.description?.substring(0, 500),
+      budget: job.budget,
+      skills: (job.skills || []).join(', '),
+      generated_proposal: result.proposal,
+      ai_model: result.model,
+      success: true
+    };
+    db.logs.create(logEntry);
+
+    console.log('Extension proposal generated successfully');
+
+    return res.json({
+      success: true,
+      proposal: result.proposal,
+      requestId: Date.now().toString(36)
+    });
+
+  } catch (error) {
+    console.error('Extension generate error:', error);
+
+    // Log failed attempt
+    try {
+      db.logs.create({
+        project_title: req.body?.job?.title || 'Unknown',
+        description: req.body?.job?.description?.substring(0, 500) || '',
+        budget: req.body?.job?.budget || '',
+        skills: (req.body?.job?.skills || []).join(', '),
+        generated_proposal: '',
+        ai_model: 'glm-4.7-flash',
+        success: false,
+        error: error.message
+      });
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: getClientErrorMessage(error, 'Failed to generate proposal')
+    });
+  }
+});
+
+// Serve extension files statically
+app.use('/extension', express.static(path.join(__dirname, '..', 'extension')));
+
+// ============================================
+// ADMIN API ROUTES
+// ============================================
+
 app.use('/admin/api', requireAdminAuth);
 
 /**

@@ -1,0 +1,230 @@
+:root {
+  --upg-teal: #1abc9c;
+  --upg-dark-teal: #16a085;
+  --upg-ink: #1f2937;
+  --upg-muted: #6b7280;
+  --upg-surface: #ffffff;
+  --upg-border: #e5e7eb;
+}
+
+#upg-floating-button {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2147483644;
+  background: linear-gradient(135deg, var(--upg-teal), var(--upg-dark-teal));
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 12px 24px rgba(22, 160, 133, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+#upg-floating-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(22, 160, 133, 0.35);
+}
+
+#upg-floating-button:active {
+  transform: translateY(0);
+}
+
+#upg-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483645;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  animation: upgFadeIn 0.2s ease;
+}
+
+.upg-modal-card {
+  width: min(720px, calc(100vw - 24px));
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  background: var(--upg-surface);
+  border-radius: 14px;
+  border: 1px solid var(--upg-border);
+  box-shadow: 0 20px 40px rgba(2, 6, 23, 0.25);
+  overflow: hidden;
+  animation: upgPopIn 0.2s ease;
+}
+
+.upg-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(26, 188, 156, 0.12), rgba(22, 160, 133, 0.12));
+  border-bottom: 1px solid var(--upg-border);
+}
+
+.upg-modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--upg-ink);
+}
+
+.upg-icon-btn {
+  border: 0;
+  background: transparent;
+  color: var(--upg-muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.upg-modal-body {
+  padding: 16px;
+  overflow: auto;
+}
+
+.upg-state {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.upg-state-loading {
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  color: var(--upg-ink);
+}
+
+.upg-spinner {
+  width: 38px;
+  height: 38px;
+  border: 4px solid rgba(26, 188, 156, 0.2);
+  border-top-color: var(--upg-teal);
+  border-radius: 50%;
+  animation: upgSpin 0.8s linear infinite;
+}
+
+.upg-textarea {
+  width: 100%;
+  min-height: 260px;
+  max-height: 55vh;
+  resize: vertical;
+  border: 1px solid var(--upg-border);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--upg-ink);
+  font-size: 14px;
+  line-height: 1.45;
+  background: #fcfdfd;
+}
+
+.upg-textarea:focus {
+  outline: 2px solid rgba(26, 188, 156, 0.25);
+  border-color: var(--upg-teal);
+}
+
+.upg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.upg-btn {
+  border: 1px solid var(--upg-border);
+  background: #fff;
+  color: var(--upg-ink);
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.upg-btn:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.upg-btn-primary {
+  background: var(--upg-teal);
+  color: #fff;
+  border-color: var(--upg-teal);
+}
+
+.upg-btn-primary:hover {
+  background: var(--upg-dark-teal);
+  border-color: var(--upg-dark-teal);
+}
+
+.upg-label {
+  font-size: 13px;
+  color: var(--upg-muted);
+}
+
+.upg-error-text {
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 0;
+}
+
+.upg-hint {
+  margin: 0;
+  color: var(--upg-dark-teal);
+  font-size: 13px;
+}
+
+@keyframes upgSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes upgFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes upgPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  #upg-floating-button {
+    right: 12px;
+    bottom: 12px;
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .upg-modal-card {
+    width: calc(100vw - 12px);
+    max-height: calc(100vh - 12px);
+    border-radius: 12px;
+  }
+
+  .upg-modal-body {
+    padding: 12px;
+  }
+
+  .upg-textarea {
+    min-height: 220px;
+  }
+}

@@ -1,0 +1,31 @@
+<div class="upg-modal-card" role="dialog" aria-modal="true" aria-labelledby="upg-modal-title">
+  <div class="upg-modal-header">
+    <h2 id="upg-modal-title">Upwork Proposal Generator</h2>
+    <button class="upg-icon-btn" data-action="close" aria-label="Close">✕</button>
+  </div>
+
+  <div class="upg-modal-body">
+    <div class="upg-state upg-state-loading" data-state="loading" hidden>
+      <div class="upg-spinner" aria-hidden="true"></div>
+      <p>Generating proposal...</p>
+    </div>
+
+    <div class="upg-state upg-state-error" data-state="error" hidden>
+      <p class="upg-error-text" data-role="error-text">Something went wrong.</p>
+      <div class="upg-actions">
+        <button class="upg-btn upg-btn-primary" data-action="retry">Retry</button>
+        <button class="upg-btn" data-action="close">Close</button>
+      </div>
+    </div>
+
+    <div class="upg-state upg-state-result" data-state="result" hidden>
+      <label for="upg-proposal" class="upg-label">Generated Proposal</label>
+      <textarea id="upg-proposal" class="upg-textarea" data-role="proposal" readonly></textarea>
+      <div class="upg-actions">
+        <button class="upg-btn upg-btn-primary" data-action="copy">Copy to Clipboard</button>
+        <button class="upg-btn" data-action="close">Close</button>
+      </div>
+      <p class="upg-hint" data-role="copy-status" hidden>Copied!</p>
+    </div>
+  </div>
+</div>
