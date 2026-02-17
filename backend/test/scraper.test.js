@@ -73,6 +73,10 @@ test('detectCloudflareFromHtml identifies challenge pages', () => {
   assert.equal(scraper.__test.detectCloudflareFromHtml(html), true);
 });
 
+test('detectCloudflareFromHtml does not flag normal Upwork fixture as Cloudflare', () => {
+  assert.equal(scraper.__test.detectCloudflareFromHtml(fixtureHtml), false);
+});
+
 test('normalizeScrapeError maps unknown errors to SCRAPE_FAILED', () => {
   const normalized = scraper.normalizeScrapeError(new Error('network issue'));
   assert.equal(normalized.code, scraper.SCRAPE_ERROR_CODES.SCRAPE_FAILED);

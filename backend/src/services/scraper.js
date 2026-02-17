@@ -20,6 +20,7 @@ const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKi
 const NAVIGATION_TIMEOUT_MS = Number.parseInt(process.env.SCRAPER_NAV_TIMEOUT_MS, 10) || 30000;
 const CHALLENGE_WAIT_MS = Number.parseInt(process.env.SCRAPER_CHALLENGE_WAIT_MS, 10) || 7000;
 const ENABLE_HTML_PARSER_FALLBACK = process.env.SCRAPER_ENABLE_PARSER_FALLBACK !== 'false';
+const SCRAPER_HEADLESS = process.env.SCRAPER_HEADLESS !== 'false';
 let cachedChromium = null;
 
 const turndownService = new TurndownService({
@@ -199,7 +200,9 @@ function detectCloudflareFromHtml(html) {
     'just a moment...',
     'attention required! | cloudflare',
     'cf-browser-verification',
-    'cdn-cgi/challenge-platform'
+    'cdn-cgi/challenge-platform',
+    'cf-chl-',
+    'ray id:'
   ].some((marker) => normalized.includes(marker));
 }
 
@@ -288,7 +291,7 @@ async function detectCloudflareOnPage(page) {
 
 async function scrapeWithPlaywright(url) {
   const chromium = getChromium();
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: SCRAPER_HEADLESS });
   let page;
   let context;
 
@@ -312,20 +315,25 @@ async function scrapeWithPlaywright(url) {
     if (isCloudflareOnFirstPass) {
       await page.waitForTimeout(CHALLENGE_WAIT_MS);
       await page.waitForLoadState('domcontentloaded', { timeout: Math.min(NAVIGATION_TIMEOUT_MS, 15000) }).catch(() => {});
-
-      const isCloudflareOnSecondPass = await detectCloudflareOnPage(page);
-      if (isCloudflareOnSecondPass) {
-        throw new ScrapeError(
-          SCRAPE_ERROR_CODES.SCRAPE_BLOCKED_CLOUDFLARE,
-          'Could not fetch this URL due to page protection. Please fill fields manually and continue.'
-        );
-      }
     }
 
     const finalUrl = page.url();
     assertAllowedUpworkHost(finalUrl);
     const html = await page.content();
-    return extractFromHtml(html, finalUrl, 'playwright');
+    const hasCloudflareMarkers = detectCloudflareFromHtml(html);
+
+    try {
+      return extractFromHtml(html, finalUrl, 'playwright');
+    } catch (extractError) {
+      if (isCloudflareOnFirstPass || hasCloudflareMarkers) {
+        throw new ScrapeError(
+          SCRAPE_ERROR_CODES.SCRAPE_BLOCKED_CLOUDFLARE,
+          'Could not fetch this URL due to page protection. Please fill fields manually and continue.',
+          { cause: extractError }
+        );
+      }
+      throw extractError;
+    }
   } finally {
     if (page) {
       await page.close().catch(() => {});
@@ -358,14 +366,16 @@ async function scrapeWithParser(url) {
     );
   }
 
-  if (detectCloudflareFromHtml(response.data)) {
+  const htmlContent = typeof response.data === 'string' ? response.data : String(response.data || '');
+
+  if (detectCloudflareFromHtml(htmlContent)) {
     throw new ScrapeError(
       SCRAPE_ERROR_CODES.SCRAPE_BLOCKED_CLOUDFLARE,
       'Could not fetch this URL due to page protection. Please fill fields manually and continue.'
     );
   }
 
-  const data = extractFromHtml(response.data, finalUrl, 'parser');
+  const data = extractFromHtml(htmlContent, finalUrl, 'parser');
   data.warnings = uniqueNonEmpty([
     ...data.warnings,
     'Used parser fallback extraction mode'
@@ -394,17 +404,18 @@ async function scrapeJobUrl(rawUrl) {
   } catch (error) {
     const normalizedError = normalizeScrapeError(error);
 
-    if (
-      normalizedError.code === SCRAPE_ERROR_CODES.SCRAPE_BLOCKED_CLOUDFLARE ||
-      !ENABLE_HTML_PARSER_FALLBACK
-    ) {
+    if (!ENABLE_HTML_PARSER_FALLBACK) {
       throw normalizedError;
     }
 
     try {
       return await scrapeWithParser(safeUrl);
     } catch (fallbackError) {
-      throw normalizeScrapeError(fallbackError);
+      const fallbackNormalized = normalizeScrapeError(fallbackError);
+      if (fallbackNormalized.code === SCRAPE_ERROR_CODES.SCRAPE_BLOCKED_CLOUDFLARE) {
+        throw fallbackNormalized;
+      }
+      throw normalizedError;
     }
   }
 }
