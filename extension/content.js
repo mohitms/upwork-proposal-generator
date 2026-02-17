@@ -95,12 +95,20 @@
   }
 
   function scrapeJobAndClientData() {
-    const title = firstText([
+    const titleSelectors = [
       '[data-test="job-title"]',
-      'h1',
+      '[data-test="up-job-title"]',
+      '[data-testid="job-title"]',
+      '[data-qa="job-title"]',
+      'header h1',
+      'main h1',
+      'article h1',
       '.job-details-title',
-      '.air3-card-section h1'
-    ]);
+      '.air3-card-section h1',
+      'h1'
+    ];
+    const titleResult = firstTextWithMeta(titleSelectors);
+    const title = titleResult.text;
 
     const description = firstText([
       '[data-test="job-description-text"]',
@@ -110,28 +118,53 @@
       '[data-test="up-job-description-text"]'
     ], true);
 
-    const budgetRaw = firstText([
+    const budgetSelectors = [
       '[data-test="job-type"]',
+      '[data-test="job-type-label"]',
       '[data-test="budget"]',
+      '[data-test="hourly-rate"]',
+      '[data-test="fixed-price"]',
+      '[data-testid="job-type"]',
+      '[data-qa="job-type"]',
       '.js-budget',
-      '.up-card-section [data-test*="budget"]'
-    ]);
+      '.job-details [data-test*="budget"]',
+      '.job-details [data-test*="rate"]',
+      '.up-card-section [data-test*="budget"]',
+      '.up-card-section [data-test*="rate"]',
+      'section [data-test*="job-type"]'
+    ];
+    const budgetResult = firstTextWithMeta(budgetSelectors);
+    const budgetRaw = budgetResult.text || findBudgetFromPageText();
 
-    const budgetType = /hour/i.test(budgetRaw) ? 'hourly' : 'fixed';
+    const budgetType = /hour|hr/i.test(budgetRaw) ? 'hourly' : 'fixed';
     const budget = extractBudget(budgetRaw);
 
-    const skills = uniqueTexts([
+    const skillSelectors = [
       '[data-test="token"]',
       '[data-test="skills"] a',
+      '[data-test="skills"] [data-test*="skill"]',
+      '[data-test*="skill"]',
+      '[data-testid*="skill"]',
+      '[data-cy*="skill"]',
       'a[data-test*="skill"]',
-      '.air3-token'
-    ]);
+      '.air3-token',
+      '.air3-pill',
+      '.skills-list .air3-token'
+    ];
+    const skillsResult = uniqueTextsWithMeta(skillSelectors);
+    const skills = skillsResult.texts;
 
-    const category = firstText([
+    const categorySelectors = [
       '[data-test="job-category"]',
       '[data-test="category"]',
-      '.cfe-ui-job-breadcrumb a:last-child'
-    ]);
+      '[data-testid="job-category"]',
+      '[data-qa="job-category"]',
+      'nav[aria-label*="breadcrumb" i] a:last-child',
+      '.cfe-ui-job-breadcrumb a:last-child',
+      '.up-breadcrumb a:last-child'
+    ];
+    const categoryResult = firstTextWithMeta(categorySelectors);
+    const category = categoryResult.text || extractFromLabeledRows(['Category', 'Specialization']);
 
     const projectLength = extractFromLabeledRows(['Project length', 'Duration']);
     const hoursPerWeek = extractFromLabeledRows(['Hours per week', 'Hours needed']);
@@ -173,6 +206,28 @@
 
     const memberSince = extractFromLabeledRows(['Member since']) || firstText(['[data-test="member-since"]']);
 
+    console.debug('[UPG] Title scrape:', {
+      value: title,
+      selector: titleResult.selector,
+      tried: titleSelectors
+    });
+    console.debug('[UPG] Budget scrape:', {
+      value: budget,
+      raw: budgetRaw,
+      selector: budgetResult.selector,
+      tried: budgetSelectors
+    });
+    console.debug('[UPG] Skills scrape:', {
+      values: skills,
+      matchedSelectors: skillsResult.matchedSelectors,
+      tried: skillSelectors
+    });
+    console.debug('[UPG] Category scrape:', {
+      value: category,
+      selector: categoryResult.selector,
+      tried: categorySelectors
+    });
+
     const payload = {
       job: {
         title,
@@ -204,24 +259,41 @@
   }
 
   function firstText(selectors, preserveLineBreaks = false) {
+    return firstTextWithMeta(selectors, preserveLineBreaks).text;
+  }
+
+  function firstTextWithMeta(selectors, preserveLineBreaks = false) {
     for (const selector of selectors) {
       const el = document.querySelector(selector);
       if (!el) continue;
       const text = normalizeText(preserveLineBreaks ? el.innerText : el.textContent, preserveLineBreaks);
-      if (text) return text;
+      if (text) return { text, selector };
     }
-    return '';
+    return { text: '', selector: '' };
   }
 
   function uniqueTexts(selectors) {
+    return uniqueTextsWithMeta(selectors).texts;
+  }
+
+  function uniqueTextsWithMeta(selectors) {
     const values = new Set();
+    const matchedSelectors = [];
+
     for (const selector of selectors) {
-      document.querySelectorAll(selector).forEach((el) => {
+      const els = document.querySelectorAll(selector);
+      if (els.length) matchedSelectors.push(`${selector} (${els.length})`);
+
+      els.forEach((el) => {
         const text = normalizeText(el.textContent);
         if (text) values.add(text);
       });
     }
-    return Array.from(values);
+
+    return {
+      texts: Array.from(values),
+      matchedSelectors
+    };
   }
 
   function normalizeText(value, preserveLineBreaks = false) {
@@ -244,7 +316,7 @@
       if (!text) continue;
 
       for (const label of labelCandidates) {
-        const re = new RegExp(`^${escapeRegex(label)}\s*:?[\s-]*(.+)$`, 'i');
+        const re = new RegExp(`^${escapeRegex(label)}\\s*:?[\\s-]*(.+)$`, 'i');
         const match = text.match(re);
         if (match?.[1]) return normalizeText(match[1]);
 
@@ -259,10 +331,24 @@
     return '';
   }
 
+  function findBudgetFromPageText() {
+    const text = normalizeText(document.body?.innerText || '');
+    if (!text) return '';
+
+    const hourly = text.match(/\$\s?[\d,.]+\s*-\s*\$\s?[\d,.]+\s*\/\s*hr/i);
+    if (hourly?.[0]) return hourly[0];
+
+    const fixed = text.match(/Fixed\s*price[^\n$]*(\$\s?[\d,.]+)/i);
+    if (fixed?.[0]) return fixed[0];
+
+    const general = text.match(/(Hourly\s*[:\-]?\s*)?\$\s?[\d,.]+(?:\s*-\s*\$\s?[\d,.]+)?(\s*\/\s*hr)?/i);
+    return general?.[0] || '';
+  }
+
   function extractBudget(raw) {
     if (!raw) return '';
-    const moneyRanges = raw.match(/\$[\d,.]+(?:\s*-\s*\$[\d,.]+)?/g);
-    if (moneyRanges?.length) return moneyRanges.join(' · ');
+    const moneyRanges = raw.match(/\$\s?[\d,.]+(?:\s*-\s*\$\s?[\d,.]+)?(?:\s*\/\s*hr)?/gi);
+    if (moneyRanges?.length) return moneyRanges.map((v) => normalizeText(v)).join(' · ');
     return raw;
   }
 
