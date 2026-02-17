@@ -2,6 +2,18 @@
 
 All notable changes to the Chrome extension will be documented here.
 
+## [1.0.1] - 2026-02-17
+
+### Fixed
+- Improved Upwork scraper with robust CSS selectors for title, budget, skills, and category
+- Added multiple fallback selectors to handle Upwork DOM structure variations
+- Added debug logging to console for troubleshooting scraped data
+- Fixed CORS issue by adding upwork.com to allowed origins
+
+### Changed
+- Enhanced budget extraction with pattern matching fallback
+- Better error messages and debugging output
+
 ## [1.0.0] - 2026-02-17
 
 ### Added

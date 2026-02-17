@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Upwork Proposal Generator",
   "description": "Generate tailored proposals from Upwork job posts in one click.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minimum_chrome_version": "114",
   "update_url": "https://upwork.webxhosts.in/extension/updates.xml",
   "icons": {
