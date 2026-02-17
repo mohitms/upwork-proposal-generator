@@ -7,19 +7,30 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body class="auth-page">
-  <main class="auth-card">
-    <h1>Upwork Proposal Generator</h1>
-    <p class="auth-subtitle">Sign in to access the admin dashboard.</p>
+  <div class="auth-background-glow auth-background-glow--one" aria-hidden="true"></div>
+  <div class="auth-background-glow auth-background-glow--two" aria-hidden="true"></div>
 
-    <form id="login-form" class="auth-form">
-      <label for="username">Username</label>
-      <input type="text" id="username" name="username" required autocomplete="username" placeholder="admin">
+  <main class="auth-card" role="main">
+    <div class="auth-brand">
+      <div class="auth-logo" aria-hidden="true">UP</div>
+      <p class="auth-kicker">Admin Access</p>
+      <h1>Upwork Proposal Generator</h1>
+      <p class="auth-subtitle">Sign in to manage proposals, templates, and generation settings.</p>
+    </div>
 
-      <label for="password">Password</label>
-      <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Enter password">
+    <form id="login-form" class="auth-form" novalidate>
+      <div class="auth-field">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required autocomplete="username" placeholder="Enter your username">
+      </div>
 
-      <button type="submit" id="login-btn" class="btn btn-primary">Login</button>
-      <p id="login-error" class="auth-error hidden"></p>
+      <div class="auth-field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Enter your password">
+      </div>
+
+      <button type="submit" id="login-btn" class="btn btn-primary auth-submit">Sign In</button>
+      <p id="login-error" class="auth-error hidden" role="alert"></p>
     </form>
   </main>
 

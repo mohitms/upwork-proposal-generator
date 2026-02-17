@@ -21,6 +21,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   initTabs();
+  initEnhancedInputs();
+  initKeyboardShortcuts();
   loadPrompts();
   loadStats();
   loadKeys();
@@ -65,6 +67,7 @@ function switchTab(tab) {
   });
   
   currentTab = tab;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   
   // Load data for specific tabs
   if (tab === 'logs') {
@@ -72,6 +75,29 @@ function switchTab(tab) {
   } else if (tab === 'settings') {
     loadKeys();
   }
+}
+
+function initEnhancedInputs() {
+  document.querySelectorAll('textarea').forEach(textarea => {
+    const resize = () => {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 420)}px`;
+    };
+
+    textarea.addEventListener('input', resize);
+    resize();
+  });
+}
+
+function initKeyboardShortcuts() {
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      const modal = document.querySelector('.log-modal');
+      if (modal) {
+        modal.remove();
+      }
+    }
+  });
 }
 
 // ============================================
@@ -163,9 +189,13 @@ async function loadPrompts() {
     if (result.success && result.data) {
       result.data.forEach(prompt => {
         if (prompt.type === 'system') {
-          document.getElementById('system-prompt').value = prompt.content;
+          const systemPrompt = document.getElementById('system-prompt');
+          systemPrompt.value = prompt.content;
+          systemPrompt.dispatchEvent(new Event('input'));
         } else if (prompt.type === 'user') {
-          document.getElementById('user-prompt').value = prompt.content;
+          const userPrompt = document.getElementById('user-prompt');
+          userPrompt.value = prompt.content;
+          userPrompt.dispatchEvent(new Event('input'));
         }
       });
     }
@@ -251,7 +281,9 @@ async function fetchJobDataFromUrl() {
 
     const data = result.data;
     document.getElementById('test-title').value = data.title || '';
-    document.getElementById('test-description').value = data.description || '';
+    const descriptionInput = document.getElementById('test-description');
+    descriptionInput.value = data.description || '';
+    descriptionInput.dispatchEvent(new Event('input'));
     document.getElementById('test-budget').value = data.budget || '';
     document.getElementById('test-skills').value = data.skills || '';
 
