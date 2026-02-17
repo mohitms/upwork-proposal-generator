@@ -8,10 +8,16 @@ const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
 const { version: APP_VERSION } = require('../package.json');
 const db = require('./database');
 const ai = require('./src/services/ai');
 const scraper = require('./src/services/scraper');
+
+const execFileAsync = promisify(execFile);
 
 const app = express();
 const PORT = Number.parseInt(process.env.PORT, 10) || 3000;
@@ -343,6 +349,18 @@ function sendDashboardOrLogin(req, res) {
   return res.sendFile(path.join(PUBLIC_DIR, 'login.html'));
 }
 
+async function createExtensionZip() {
+  const extensionDir = path.join(__dirname, '..', 'extension');
+  const timestamp = Date.now();
+  const zipPath = path.join(os.tmpdir(), `upwork-proposal-generator-extension-${timestamp}.zip`);
+
+  await execFileAsync('zip', ['-r', zipPath, '.', '-x', '*.DS_Store', '__MACOSX/*'], {
+    cwd: extensionDir
+  });
+
+  return zipPath;
+}
+
 // ============================================
 // AUTH ROUTES
 // ============================================
@@ -416,9 +434,50 @@ app.get('/api/health', (req, res) => {
 });
 
 /**
+ * Download Chrome extension as ZIP
+ */
+app.get('/api/extension/download', async (req, res) => {
+  let zipPath;
+
+  try {
+    zipPath = await createExtensionZip();
+    const filename = `upwork-proposal-generator-extension-${APP_VERSION}.zip`;
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    return res.download(zipPath, filename, async (downloadError) => {
+      try {
+        await fs.promises.unlink(zipPath);
+      } catch (cleanupError) {
+        console.error('Failed to cleanup extension zip:', cleanupError);
+      }
+
+      if (downloadError) {
+        console.error('Extension download failed:', downloadError);
+      }
+    });
+  } catch (error) {
+    if (zipPath) {
+      try {
+        await fs.promises.unlink(zipPath);
+      } catch {
+        // ignore cleanup errors
+      }
+    }
+
+    console.error('Failed to create extension zip:', error);
+    return res.status(500).json({
+      success: false,
+      error: getClientErrorMessage(error, 'Unable to package extension for download')
+    });
+  }
+});
+
+/**
  * Scrape Upwork job details from URL
  */
-app.post('/api/scrape-job-url', requireAdminAuth, scrapeRateLimit, async (req, res) => {
+app.post('/api/scrape-job-url', requireAdminAuth, scrapeRateLimit, async (req, res) => { 
   const { url } = req.body || {};
 
   if (!url || typeof url !== 'string') {
@@ -869,6 +928,10 @@ app.get('/', (req, res) => {
 
 app.get('/login', (req, res) => {
   return res.sendFile(path.join(PUBLIC_DIR, 'login.html'));
+});
+
+app.get('/download', (req, res) => {
+  return res.sendFile(path.join(PUBLIC_DIR, 'download.html'));
 });
 
 app.get('/index.html', requireDashboardAuth, (req, res) => {

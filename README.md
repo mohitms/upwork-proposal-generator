@@ -521,11 +521,10 @@ Set a non-default `ADMIN_PASSWORD` in `.env`.
 
 ## Credits
 
-Built and maintained for internal operations by:
-
-- **Tridhya Tech**
+Built with ❤️ by:
+- **Mohit**
 - **Khushi Agrawal**
-- **Jarvis AI Assistant**
+- **Jarvis** (AI Assistant & Friend)
 
 ---
 
