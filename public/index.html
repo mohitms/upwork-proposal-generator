@@ -8,199 +8,217 @@
 </head>
 <body>
   <div class="app-shell"></div>
-  <div class="app">
-    <header class="header">
-      <div class="header-top">
+  <div id="mobile-backdrop" class="mobile-backdrop hidden"></div>
+
+  <div class="dashboard">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-top">
         <div class="brand">
           <div class="brand-mark">UP</div>
           <div>
             <p class="brand-kicker">Admin Dashboard</p>
-            <h1>Upwork Proposal Generator</h1>
+            <h1>Proposal Generator</h1>
           </div>
         </div>
 
-        <div class="header-actions">
-          <span id="auth-user" class="user-badge"></span>
-          <button id="logout-btn" class="btn btn-secondary btn-sm">Logout</button>
-        </div>
+        <nav class="sidebar-nav">
+          <button class="nav-btn active" data-tab="generator"><span class="nav-icon">⚡</span><span>Test Generator</span></button>
+          <button class="nav-btn" data-tab="prompts"><span class="nav-icon">🧠</span><span>Prompts</span></button>
+          <button class="nav-btn" data-tab="logs"><span class="nav-icon">📊</span><span>Logs</span></button>
+          <button class="nav-btn" data-tab="settings"><span class="nav-icon">⚙️</span><span>Settings</span></button>
+        </nav>
       </div>
 
-      <nav class="nav">
-        <button class="nav-btn active" data-tab="prompts">Prompts</button>
-        <button class="nav-btn" data-tab="generator">Test Generator</button>
-        <button class="nav-btn" data-tab="logs">Logs</button>
-        <button class="nav-btn" data-tab="settings">Settings</button>
-      </nav>
-    </header>
+      <div class="sidebar-bottom">
+        <span id="auth-user" class="user-badge"></span>
+        <button id="logout-btn" class="btn btn-secondary btn-sm">Logout</button>
+      </div>
+    </aside>
 
-    <main class="content">
-      <section id="tab-prompts" class="tab active">
-        <div class="tab-head">
-          <h2>Prompt Configuration</h2>
-          <p>Refine your system and user prompt templates for consistent, high-quality proposal generation.</p>
-        </div>
+    <main class="main">
+      <header class="mobile-header">
+        <button id="sidebar-toggle" class="icon-btn" aria-label="Open navigation">☰</button>
+        <div class="mobile-brand">Upwork Proposal Generator</div>
+      </header>
 
-        <div class="card">
-          <div class="form-group">
-            <label for="system-prompt">System Prompt</label>
-            <textarea id="system-prompt" rows="8" placeholder="Loading..."></textarea>
-          </div>
-
-          <div class="form-group">
-            <label for="user-prompt">User Prompt Template</label>
-            <textarea id="user-prompt" rows="10" placeholder="Loading..."></textarea>
-            <p class="hint">Variables: {{title}}, {{description}}, {{budget}}, {{skills}}</p>
-          </div>
-
-          <div class="inline-actions">
-            <button id="save-prompts" class="btn btn-primary">Save Prompts</button>
-            <span id="prompts-status" class="status"></span>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-generator" class="tab">
-        <div class="tab-head">
-          <h2>Test Proposal Generator</h2>
-          <p class="khushi-note">Generate a polished, client-ready draft for Khushi Agrawal using a URL or manual job details.</p>
-        </div>
-
-        <div class="card">
-          <div class="form-group">
-            <label for="job-url">Upwork Job URL</label>
-            <div class="url-fetch-row">
-              <input type="url" id="job-url" placeholder="https://www.upwork.com/jobs/...">
-              <button id="fetch-url-btn" class="btn btn-secondary" type="button" data-default-label="Fetch Data">Fetch Data</button>
-            </div>
-            <p class="hint">Paste an Upwork URL to auto-fill title, description, budget, and skills.</p>
-            <span id="url-fetch-status" class="status"></span>
-          </div>
-
-          <div class="form-group">
-            <label for="test-title">Job Title *</label>
-            <input type="text" id="test-title" placeholder="e.g., Need a React developer for e-commerce site">
-          </div>
-
-          <div class="form-group">
-            <label for="test-description">Job Description *</label>
-            <textarea id="test-description" rows="6" placeholder="Paste the full job description here..."></textarea>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="test-budget">Budget</label>
-              <input type="text" id="test-budget" placeholder="e.g., $500-1000">
-            </div>
-
-            <div class="form-group">
-              <label for="test-skills">Skills</label>
-              <input type="text" id="test-skills" placeholder="e.g., React, Node.js, MongoDB">
-            </div>
-          </div>
-
-          <div class="btn-group">
-            <button id="generate-btn" class="btn btn-primary" data-default-label="Generate Proposal for Khushi">Generate Proposal for Khushi</button>
-            <button id="regenerate-btn" class="btn btn-secondary" disabled>Regenerate</button>
-          </div>
-        </div>
-
-        <div id="result-container" class="result-container hidden">
-          <div class="result-header">
-            <h3>Generated Proposal for Khushi</h3>
-            <span id="model-used" class="model-badge"></span>
-          </div>
-
-          <div id="generated-proposal" class="proposal-output"></div>
-
-          <div class="result-footer">
-            <button id="copy-btn" class="btn btn-secondary">Copy Proposal</button>
-          </div>
-        </div>
-
-        <div id="error-container" class="error-container hidden">
-          <p id="error-message"></p>
-        </div>
-      </section>
-
-      <section id="tab-logs" class="tab">
-        <div class="tab-head">
-          <h2>Request Logs</h2>
-          <p>Review generation activity, outcomes, and model details across recent requests.</p>
-        </div>
-
-        <div id="stats-container" class="stats-container">
-          <div class="stat">
-            <span class="stat-value" id="stat-total">-</span>
-            <span class="stat-label">Total Requests</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="stat-success">-</span>
-            <span class="stat-label">Successful</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="stat-failed">-</span>
-            <span class="stat-label">Failed</span>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="filters">
-            <select id="log-filter">
-              <option value="all">All Requests</option>
-              <option value="success">Successful Only</option>
-              <option value="failed">Failed Only</option>
-            </select>
-
-            <button id="refresh-logs" class="btn btn-secondary">Refresh</button>
-          </div>
-
-          <div id="logs-container" class="logs-container">
-            <p class="loading">Loading logs...</p>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-settings" class="tab">
-        <div class="tab-head">
-          <h2>Settings</h2>
-          <p>Manage provider credentials and monitor dashboard service health.</p>
-        </div>
-
-        <div class="grid-2">
-          <div class="card">
-            <div class="form-group">
-              <label>API Key Status</label>
-              <div id="keys-container" class="keys-list">
-                <p class="loading">Loading...</p>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="new-key">Update GLM API Key</label>
-              <div class="input-group">
-                <input type="password" id="new-key" placeholder="Enter new API key">
-                <button id="update-key" class="btn btn-primary">Update</button>
-              </div>
-            </div>
-
-            <span id="settings-status" class="status"></span>
+      <div class="content">
+        <section id="tab-generator" class="tab active">
+          <div class="tab-head">
+            <h2>Test Proposal Generator</h2>
+            <p class="khushi-note">Generate a polished, client-ready draft for Khushi Agrawal using a URL or manual job details.</p>
           </div>
 
           <div class="card">
             <div class="form-group">
-              <label>Server Info</label>
-              <div class="info-box">
-                <p><strong>Status:</strong> <span id="server-status">Checking...</span></p>
-                <p><strong>Port:</strong> <span id="server-port">-</span></p>
+              <label for="job-url">Upwork Job URL</label>
+              <div class="url-fetch-row">
+                <input type="url" id="job-url" placeholder="https://www.upwork.com/jobs/...">
+                <button id="fetch-url-btn" class="btn btn-secondary" type="button" data-default-label="Fetch Data">Fetch Data</button>
+              </div>
+              <p class="hint">Paste an Upwork URL to auto-fill title, description, budget, and skills.</p>
+              <span id="url-fetch-status" class="status"></span>
+            </div>
+
+            <div class="form-group">
+              <label for="test-title">Job Title *</label>
+              <input type="text" id="test-title" placeholder="e.g., Need a React developer for e-commerce site">
+            </div>
+
+            <div class="form-group">
+              <label for="test-description">Job Description *</label>
+              <textarea id="test-description" rows="6" placeholder="Paste the full job description here..."></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="test-budget">Budget</label>
+                <input type="text" id="test-budget" placeholder="e.g., $500-1000">
+              </div>
+
+              <div class="form-group">
+                <label for="test-skills">Skills</label>
+                <input type="text" id="test-skills" placeholder="e.g., React, Node.js, MongoDB">
+              </div>
+            </div>
+
+            <div class="btn-group">
+              <button id="generate-btn" class="btn btn-primary" data-default-label="Generate Proposal for Khushi">Generate Proposal for Khushi</button>
+              <button id="regenerate-btn" class="btn btn-secondary" disabled>Regenerate</button>
+            </div>
+          </div>
+
+          <div id="result-container" class="result-container hidden">
+            <div class="result-header">
+              <h3>Generated Proposal for Khushi</h3>
+              <span id="model-used" class="model-badge"></span>
+            </div>
+
+            <div id="generated-proposal" class="proposal-output"></div>
+
+            <div class="result-footer">
+              <button id="copy-btn" class="btn btn-secondary">Copy Proposal</button>
+            </div>
+          </div>
+
+          <div id="error-container" class="error-container hidden">
+            <p id="error-message"></p>
+          </div>
+        </section>
+
+        <section id="tab-prompts" class="tab">
+          <div class="tab-head">
+            <h2>Prompt Configuration</h2>
+            <p>Refine your system and user prompt templates for consistent, high-quality proposal generation.</p>
+          </div>
+
+          <div class="card">
+            <div class="form-group">
+              <label for="system-prompt">System Prompt</label>
+              <textarea id="system-prompt" rows="8" placeholder="Loading..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="user-prompt">User Prompt Template</label>
+              <textarea id="user-prompt" rows="10" placeholder="Loading..."></textarea>
+              <p class="hint">Variables: {{title}}, {{description}}, {{budget}}, {{skills}}</p>
+            </div>
+
+            <div class="inline-actions">
+              <button id="save-prompts" class="btn btn-primary">Save Prompts</button>
+              <span id="prompts-status" class="status"></span>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-logs" class="tab">
+          <div class="tab-head">
+            <h2>Request Logs</h2>
+            <p>Review generation activity, outcomes, and model details across recent requests.</p>
+          </div>
+
+          <div id="stats-container" class="stats-container">
+            <div class="stat">
+              <span class="stat-value" id="stat-total">-</span>
+              <span class="stat-label">Total Requests</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value" id="stat-success">-</span>
+              <span class="stat-label">Successful</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value" id="stat-failed">-</span>
+              <span class="stat-label">Failed</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="filters">
+              <select id="log-filter">
+                <option value="all">All Requests</option>
+                <option value="success">Successful Only</option>
+                <option value="failed">Failed Only</option>
+              </select>
+
+              <button id="refresh-logs" class="btn btn-secondary">Refresh</button>
+            </div>
+
+            <div id="logs-container" class="logs-container">
+              <p class="loading">Loading logs...</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-settings" class="tab">
+          <div class="tab-head">
+            <h2>Settings</h2>
+            <p>Manage provider credentials and monitor dashboard service health.</p>
+          </div>
+
+          <div class="grid-2">
+            <div class="card">
+              <div class="form-group">
+                <label>API Key Status</label>
+                <div id="keys-container" class="keys-list">
+                  <p class="loading">Loading...</p>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="new-key">Update GLM API Key</label>
+                <div class="input-group">
+                  <input type="password" id="new-key" placeholder="Enter new API key">
+                  <button id="update-key" class="btn btn-primary">Update</button>
+                </div>
+              </div>
+
+              <span id="settings-status" class="status"></span>
+            </div>
+
+            <div class="card">
+              <div class="form-group">
+                <label>Server Info</label>
+                <div class="info-box">
+                  <p><strong>Status:</strong> <span id="server-status">Checking...</span></p>
+                  <p><strong>Port:</strong> <span id="server-port">-</span></p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
-
-    <div id="toast" class="toast hidden"></div>
   </div>
+
+  <div id="log-detail-backdrop" class="log-detail-backdrop hidden"></div>
+  <aside id="log-detail-panel" class="log-detail-panel" aria-hidden="true">
+    <div class="log-detail-header">
+      <h3>Log Details</h3>
+      <button id="log-detail-close" class="icon-btn">✕</button>
+    </div>
+    <div id="log-detail-content" class="log-detail-content"></div>
+  </aside>
+
+  <div id="toast" class="toast hidden"></div>
 
   <script src="/app.js"></script>
 </body>

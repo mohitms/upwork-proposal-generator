@@ -1,34 +1,27 @@
 /**
  * Upwork Proposal Generator - Dashboard JavaScript
- * Mobile-friendly admin interface
  */
 
-// API Base URL
 const API_BASE = '';
-
-// State
-let currentTab = 'prompts';
+let currentTab = 'generator';
 let lastGeneratedParams = null;
-
-// ============================================
-// Initialization
-// ============================================
+let selectedLogId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const authenticated = await ensureAuthenticated();
-  if (!authenticated) {
-    return;
-  }
+  if (!authenticated) return;
 
   initTabs();
+  initMobileSidebar();
+  initLogDetailPanel();
   initEnhancedInputs();
   initKeyboardShortcuts();
+
   loadPrompts();
   loadStats();
   loadKeys();
   checkHealth();
-  
-  // Event Listeners
+
   document.getElementById('save-prompts').addEventListener('click', savePrompts);
   document.getElementById('fetch-url-btn').addEventListener('click', fetchJobDataFromUrl);
   document.getElementById('generate-btn').addEventListener('click', generateProposal);
@@ -40,41 +33,72 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('logout-btn').addEventListener('click', logout);
 });
 
-// ============================================
-// Tab Navigation
-// ============================================
-
 function initTabs() {
   const navBtns = document.querySelectorAll('.nav-btn');
-  
   navBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.tab;
-      switchTab(tab);
-    });
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
 }
 
 function switchTab(tab) {
-  // Update nav buttons
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tab);
   });
-  
-  // Update tab content
+
   document.querySelectorAll('.tab').forEach(tabEl => {
     tabEl.classList.toggle('active', tabEl.id === `tab-${tab}`);
   });
-  
+
   currentTab = tab;
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  
-  // Load data for specific tabs
+
+  if (window.innerWidth <= 980) {
+    closeMobileSidebar();
+  }
+
   if (tab === 'logs') {
     loadLogs();
   } else if (tab === 'settings') {
     loadKeys();
   }
+}
+
+function initMobileSidebar() {
+  const toggleBtn = document.getElementById('sidebar-toggle');
+  const backdrop = document.getElementById('mobile-backdrop');
+
+  if (toggleBtn) toggleBtn.addEventListener('click', openMobileSidebar);
+  if (backdrop) backdrop.addEventListener('click', closeMobileSidebar);
+}
+
+function openMobileSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('mobile-backdrop');
+  sidebar.classList.add('open');
+  backdrop.classList.remove('hidden');
+}
+
+function closeMobileSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('mobile-backdrop');
+  sidebar.classList.remove('open');
+  backdrop.classList.add('hidden');
+}
+
+function initLogDetailPanel() {
+  document.getElementById('log-detail-close').addEventListener('click', closeLogDetail);
+  document.getElementById('log-detail-backdrop').addEventListener('click', closeLogDetail);
+}
+
+function openLogDetail() {
+  document.getElementById('log-detail-panel').classList.add('open');
+  document.getElementById('log-detail-backdrop').classList.remove('hidden');
+}
+
+function closeLogDetail() {
+  selectedLogId = null;
+  document.getElementById('log-detail-panel').classList.remove('open');
+  document.getElementById('log-detail-backdrop').classList.add('hidden');
 }
 
 function initEnhancedInputs() {
@@ -92,17 +116,11 @@ function initEnhancedInputs() {
 function initKeyboardShortcuts() {
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
-      const modal = document.querySelector('.log-modal');
-      if (modal) {
-        modal.remove();
-      }
+      closeLogDetail();
+      closeMobileSidebar();
     }
   });
 }
-
-// ============================================
-// API Client
-// ============================================
 
 async function apiGet(endpoint) {
   const response = await fetch(`${API_BASE}${endpoint}`);
@@ -129,19 +147,13 @@ async function apiPut(endpoint, data) {
 
 async function parseApiResponse(response) {
   let data = {};
-  try {
-    data = await response.json();
-  } catch {
-    data = {};
-  }
+  try { data = await response.json(); } catch { data = {}; }
 
   if (!response.ok) {
     const error = new Error(data.error || `Request failed (${response.status})`);
     error.status = response.status;
     error.code = data.code;
-    if (response.status === 401) {
-      window.location.href = '/login';
-    }
+    if (response.status === 401) window.location.href = '/login';
     throw error;
   }
 
@@ -157,45 +169,33 @@ async function ensureAuthenticated() {
     }
 
     const userBadge = document.getElementById('auth-user');
-    if (userBadge) {
-      userBadge.textContent = session.username || 'admin';
-    }
+    if (userBadge) userBadge.textContent = session.username || 'admin';
 
     return true;
-  } catch (error) {
+  } catch {
     window.location.href = '/login';
     return false;
   }
 }
 
 async function logout() {
-  try {
-    await apiPost('/auth/logout', {});
-  } catch (error) {
-    console.error('Logout failed:', error);
-  } finally {
-    window.location.href = '/login';
-  }
+  try { await apiPost('/auth/logout', {}); } catch (error) { console.error('Logout failed:', error); }
+  finally { window.location.href = '/login'; }
 }
-
-// ============================================
-// Prompts Tab
-// ============================================
 
 async function loadPrompts() {
   try {
     const result = await apiGet('/admin/api/prompts');
-    
     if (result.success && result.data) {
       result.data.forEach(prompt => {
         if (prompt.type === 'system') {
-          const systemPrompt = document.getElementById('system-prompt');
-          systemPrompt.value = prompt.content;
-          systemPrompt.dispatchEvent(new Event('input'));
+          const el = document.getElementById('system-prompt');
+          el.value = prompt.content;
+          el.dispatchEvent(new Event('input'));
         } else if (prompt.type === 'user') {
-          const userPrompt = document.getElementById('user-prompt');
-          userPrompt.value = prompt.content;
-          userPrompt.dispatchEvent(new Event('input'));
+          const el = document.getElementById('user-prompt');
+          el.value = prompt.content;
+          el.dispatchEvent(new Event('input'));
         }
       });
     }
@@ -208,18 +208,17 @@ async function loadPrompts() {
 async function savePrompts() {
   const btn = document.getElementById('save-prompts');
   const status = document.getElementById('prompts-status');
-  
   const systemPrompt = document.getElementById('system-prompt').value.trim();
   const userPrompt = document.getElementById('user-prompt').value.trim();
-  
+
   if (!systemPrompt || !userPrompt) {
     showToast('Both prompts are required', 'error');
     return;
   }
-  
+
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Saving...';
-  
+
   try {
     const result = await apiPut('/admin/api/prompts', {
       promptList: [
@@ -227,15 +226,13 @@ async function savePrompts() {
         { type: 'user', content: userPrompt }
       ]
     });
-    
-    if (result.success) {
-      showToast('Prompts saved successfully', 'success');
-      status.textContent = 'Saved!';
-      status.className = 'status success';
-      setTimeout(() => { status.textContent = ''; }, 3000);
-    } else {
-      throw new Error(result.error);
-    }
+
+    if (!result.success) throw new Error(result.error);
+
+    showToast('Prompts saved successfully', 'success');
+    status.textContent = 'Saved!';
+    status.className = 'status success';
+    setTimeout(() => { status.textContent = ''; }, 3000);
   } catch (error) {
     showToast('Failed to save prompts: ' + error.message, 'error');
   } finally {
@@ -244,16 +241,9 @@ async function savePrompts() {
   }
 }
 
-// ============================================
-// Test Generator Tab
-// ============================================
-
 function setUrlFetchStatus(message = '', type = '') {
   const status = document.getElementById('url-fetch-status');
-  if (!status) {
-    return;
-  }
-
+  if (!status) return;
   status.textContent = message;
   status.className = `status${type ? ` ${type}` : ''}`;
 }
@@ -271,13 +261,11 @@ async function fetchJobDataFromUrl() {
 
   fetchBtn.disabled = true;
   fetchBtn.innerHTML = '<span class="spinner"></span> Fetching...';
-  setUrlFetchStatus('Fetching job details from URL...', '');
+  setUrlFetchStatus('Fetching job details from URL...');
 
   try {
     const result = await apiPost('/api/scrape-job-url', { url });
-    if (!result.success || !result.data) {
-      throw new Error(result.error || 'Failed to fetch URL data');
-    }
+    if (!result.success || !result.data) throw new Error(result.error || 'Failed to fetch URL data');
 
     const data = result.data;
     document.getElementById('test-title').value = data.title || '';
@@ -291,9 +279,7 @@ async function fetchJobDataFromUrl() {
     document.getElementById('regenerate-btn').disabled = true;
 
     const modeLabel = data.mode === 'playwright' ? 'browser mode' : 'parser mode';
-    const warningText = Array.isArray(data.warnings) && data.warnings.length > 0
-      ? ` (${data.warnings.join('; ')})`
-      : '';
+    const warningText = Array.isArray(data.warnings) && data.warnings.length > 0 ? ` (${data.warnings.join('; ')})` : '';
 
     setUrlFetchStatus(`Fetched via ${modeLabel}${warningText}`, data.warnings?.length ? 'warning' : 'success');
     showToast('Job details fetched and fields auto-filled', 'success');
@@ -318,35 +304,32 @@ async function generateProposal() {
   const description = document.getElementById('test-description').value.trim();
   const budget = document.getElementById('test-budget').value.trim();
   const skills = document.getElementById('test-skills').value.trim();
-  
+
   if (!title || !description) {
     showToast('Title and description are required', 'error');
     return;
   }
-  
+
   const btn = document.getElementById('generate-btn');
   const regenBtn = document.getElementById('regenerate-btn');
   const resultContainer = document.getElementById('result-container');
   const errorContainer = document.getElementById('error-container');
-  
+
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Generating...';
   errorContainer.classList.add('hidden');
   resultContainer.classList.add('hidden');
-  
+
   lastGeneratedParams = { title, description, budget, skills };
-  
+
   try {
     const result = await apiPost('/api/generate-proposal', lastGeneratedParams);
-    
-    if (result.success) {
-      document.getElementById('generated-proposal').textContent = result.proposal;
-      document.getElementById('model-used').textContent = result.model_used || 'glm-5';
-      resultContainer.classList.remove('hidden');
-      regenBtn.disabled = false;
-    } else {
-      throw new Error(result.error || 'Unknown error');
-    }
+    if (!result.success) throw new Error(result.error || 'Unknown error');
+
+    document.getElementById('generated-proposal').textContent = result.proposal;
+    document.getElementById('model-used').textContent = result.model_used || 'glm-5';
+    resultContainer.classList.remove('hidden');
+    regenBtn.disabled = false;
   } catch (error) {
     document.getElementById('error-message').textContent = error.message;
     errorContainer.classList.remove('hidden');
@@ -359,92 +342,162 @@ async function generateProposal() {
 
 async function regenerateProposal() {
   if (!lastGeneratedParams) return;
-  
   document.getElementById('test-title').value = lastGeneratedParams.title;
   document.getElementById('test-description').value = lastGeneratedParams.description;
   document.getElementById('test-budget').value = lastGeneratedParams.budget;
   document.getElementById('test-skills').value = lastGeneratedParams.skills;
-  
   generateProposal();
 }
 
 async function copyProposal() {
   const proposal = document.getElementById('generated-proposal').textContent;
-  
-  try {
-    await navigator.clipboard.writeText(proposal);
-    showToast('Copied to clipboard!', 'success');
-  } catch (error) {
-    // Fallback for older browsers
-    const textarea = document.createElement('textarea');
-    textarea.value = proposal;
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-    showToast('Copied!', 'success');
-  }
+  await copyText(proposal, 'Copied to clipboard!');
 }
-
-// ============================================
-// Logs Tab
-// ============================================
 
 async function loadLogs() {
   const container = document.getElementById('logs-container');
   container.innerHTML = '<p class="loading">Loading logs...</p>';
-  
+
   const filter = document.getElementById('log-filter').value;
-  
   let endpoint = '/admin/api/logs?limit=50';
-  if (filter === 'success') {
-    endpoint += '&success=true';
-  } else if (filter === 'failed') {
-    endpoint += '&success=false';
-  }
-  
+  if (filter === 'success') endpoint += '&success=true';
+  if (filter === 'failed') endpoint += '&success=false';
+
   try {
     const result = await apiGet(endpoint);
-    
-    if (result.success && result.data) {
-      if (result.data.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <p>No logs found</p>
-          </div>
-        `;
-        return;
-      }
-      
-      container.innerHTML = result.data.map(log => `
-        <div class="log-item ${log.success ? 'success' : 'failed'}" data-id="${log.id}">
-          <div class="log-title">${escapeHtml(log.project_title || 'Untitled')}</div>
-          <div class="log-meta">
-            <span>${formatDate(log.created_at)}</span>
-            <span>${log.success ? '✅ Success' : '❌ Failed'}</span>
-            <span>${log.ai_model || 'N/A'}</span>
-          </div>
-        </div>
-      `).join('');
-      
-      // Add click handlers
-      container.querySelectorAll('.log-item').forEach(item => {
-        item.addEventListener('click', () => showLogDetail(item.dataset.id));
-      });
-      
-      // Update stats
-      loadStats();
+    if (!result.success || !result.data) throw new Error('Failed to load logs');
+
+    if (result.data.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>No logs found</p></div>';
+      return;
     }
+
+    container.innerHTML = `
+      <table class="logs-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Job Title</th>
+            <th>Model Used</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${result.data.map(log => `
+            <tr class="logs-row" data-id="${log.id}">
+              <td>${formatDate(log.created_at)}</td>
+              <td><div class="logs-title" title="${escapeHtml(log.project_title || 'Untitled')}">${escapeHtml(log.project_title || 'Untitled')}</div></td>
+              <td>${escapeHtml(log.ai_model || 'N/A')}</td>
+              <td><span class="badge ${log.success ? 'success' : 'failed'}">${log.success ? 'Success' : 'Failed'}</span></td>
+              <td><button class="action-btn" data-action="view" data-id="${log.id}">View</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    container.querySelectorAll('.logs-row').forEach(row => {
+      row.addEventListener('click', (event) => {
+        const id = event.currentTarget.dataset.id;
+        showLogDetail(id);
+      });
+    });
+
+    container.querySelectorAll('[data-action="view"]').forEach(btn => {
+      btn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        showLogDetail(event.currentTarget.dataset.id);
+      });
+    });
+
+    loadStats();
   } catch (error) {
     console.error('Error loading logs:', error);
     container.innerHTML = '<p class="loading">Failed to load logs</p>';
   }
 }
 
+async function showLogDetail(logId) {
+  selectedLogId = logId;
+
+  const content = document.getElementById('log-detail-content');
+  content.innerHTML = '<p class="loading">Loading details...</p>';
+  openLogDetail();
+
+  try {
+    const result = await apiGet(`/admin/api/logs/${logId}`);
+    if (!result.success || !result.data) throw new Error('Failed to load log detail');
+    const log = result.data;
+
+    const proposal = log.generated_proposal || '';
+    const rawPayload = parseLogPayload(log.raw_input || log.payload || log.request_payload || null);
+
+    content.innerHTML = `
+      <div class="detail-block">
+        <h4>Job Title</h4>
+        <div class="detail-box">${escapeHtml(log.project_title || rawPayload.title || 'Untitled')}</div>
+      </div>
+
+      <div class="detail-block">
+        <h4>Job URL</h4>
+        <div class="detail-box">${escapeHtml(log.job_url || rawPayload.url || rawPayload.job_url || 'N/A')}</div>
+      </div>
+
+      <div class="detail-block">
+        <h4>Proposal</h4>
+        <div class="detail-box detail-proposal">${escapeHtml(proposal || 'No proposal generated')}</div>
+        ${proposal ? '<button id="copy-log-proposal" class="btn btn-secondary btn-sm" style="margin-top:8px;">Copy Proposal</button>' : ''}
+      </div>
+
+      <div class="detail-block">
+        <h4>Input Parameters</h4>
+        <div class="detail-box">
+          <strong>Title:</strong> ${escapeHtml(rawPayload.title || log.project_title || 'N/A')}\n
+          <strong>Description:</strong> ${escapeHtml(rawPayload.description || log.description || 'N/A')}\n
+          <strong>Budget:</strong> ${escapeHtml(rawPayload.budget || log.budget || 'N/A')}\n
+          <strong>Skills:</strong> ${escapeHtml(rawPayload.skills || log.skills || 'N/A')}
+        </div>
+      </div>
+
+      <div class="detail-block">
+        <h4>Metadata</h4>
+        <div class="detail-box">
+          <strong>Model:</strong> ${escapeHtml(log.ai_model || 'N/A')}\n
+          <strong>Timestamp:</strong> ${escapeHtml(formatDate(log.created_at))}\n
+          <strong>Status:</strong> ${log.success ? 'Success' : 'Failed'}\n
+          <strong>Token Usage:</strong> ${escapeHtml(String(log.token_usage ?? log.tokens_used ?? rawPayload.token_usage ?? 'N/A'))}
+        </div>
+      </div>
+
+      ${log.error ? `<div class="detail-block"><h4>Error</h4><div class="detail-box" style="color:#dc3545;">${escapeHtml(log.error)}</div></div>` : ''}
+    `;
+
+    const copyBtn = document.getElementById('copy-log-proposal');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => copyText(proposal, 'Proposal copied'));
+    }
+  } catch (error) {
+    content.innerHTML = '<p class="loading">Failed to load log details</p>';
+  }
+}
+
+function parseLogPayload(payload) {
+  if (!payload) return {};
+  if (typeof payload === 'object') return payload;
+  if (typeof payload === 'string') {
+    try {
+      return JSON.parse(payload);
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 async function loadStats() {
   try {
     const result = await apiGet('/admin/api/stats');
-    
     if (result.success && result.data) {
       document.getElementById('stat-total').textContent = result.data.total_requests || 0;
       document.getElementById('stat-success').textContent = result.data.successful_requests || 0;
@@ -455,81 +508,23 @@ async function loadStats() {
   }
 }
 
-async function showLogDetail(logId) {
-  try {
-    const result = await apiGet(`/admin/api/logs/${logId}`);
-    
-    if (result.success && result.data) {
-      const log = result.data;
-      
-      const modal = document.createElement('div');
-      modal.className = 'log-modal';
-      modal.innerHTML = `
-        <div class="log-modal-content">
-          <div class="log-modal-header">
-            <h3>${escapeHtml(log.project_title || 'Untitled')}</h3>
-            <button class="log-modal-close">&times;</button>
-          </div>
-          <div class="log-modal-body">
-            <h4>Description</h4>
-            <pre>${escapeHtml(log.description || 'N/A')}</pre>
-            
-            <p><strong>Budget:</strong> ${escapeHtml(log.budget || 'N/A')}</p>
-            <p><strong>Skills:</strong> ${escapeHtml(log.skills || 'N/A')}</p>
-            <p><strong>Model:</strong> ${escapeHtml(log.ai_model || 'N/A')}</p>
-            <p><strong>Status:</strong> ${log.success ? '✅ Success' : '❌ Failed'}</p>
-            <p><strong>Date:</strong> ${formatDate(log.created_at)}</p>
-            
-            ${log.generated_proposal ? `
-              <h4>Generated Proposal</h4>
-              <pre>${escapeHtml(log.generated_proposal)}</pre>
-            ` : ''}
-            
-            ${log.error ? `
-              <h4>Error</h4>
-              <pre style="color: var(--danger)">${escapeHtml(log.error)}</pre>
-            ` : ''}
-          </div>
-        </div>
-      `;
-      
-      modal.querySelector('.log-modal-close').addEventListener('click', () => modal.remove());
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.remove();
-      });
-      
-      document.body.appendChild(modal);
-    }
-  } catch (error) {
-    showToast('Failed to load log details', 'error');
-  }
-}
-
-// ============================================
-// Settings Tab
-// ============================================
-
 async function loadKeys() {
   const container = document.getElementById('keys-container');
-  
   try {
     const result = await apiGet('/admin/api/keys');
-    
     if (result.success && result.data) {
       if (result.data.length === 0) {
         container.innerHTML = '<p>No API keys configured</p>';
         return;
       }
-      
+
       container.innerHTML = result.data.map(key => `
         <div class="key-item">
           <div>
             <strong>${escapeHtml(key.provider)}</strong>
             <br><small>${key.key_masked || 'No key'}</small>
           </div>
-          <span class="key-status ${key.is_active ? 'active' : 'inactive'}">
-            ${key.is_active ? 'Active' : 'Inactive'}
-          </span>
+          <span class="key-status ${key.is_active ? 'active' : 'inactive'}">${key.is_active ? 'Active' : 'Inactive'}</span>
         </div>
       `).join('');
     }
@@ -543,28 +538,22 @@ async function updateApiKey() {
   const keyInput = document.getElementById('new-key');
   const key = keyInput.value.trim();
   const status = document.getElementById('settings-status');
-  
+
   if (!key) {
     showToast('Please enter an API key', 'error');
     return;
   }
-  
+
   try {
-    const result = await apiPost('/admin/api/keys', {
-      provider: 'glm',
-      key: key
-    });
-    
-    if (result.success) {
-      showToast('API key updated successfully', 'success');
-      keyInput.value = '';
-      status.textContent = 'Updated!';
-      status.className = 'status success';
-      setTimeout(() => { status.textContent = ''; }, 3000);
-      loadKeys();
-    } else {
-      throw new Error(result.error);
-    }
+    const result = await apiPost('/admin/api/keys', { provider: 'glm', key });
+    if (!result.success) throw new Error(result.error);
+
+    showToast('API key updated successfully', 'success');
+    keyInput.value = '';
+    status.textContent = 'Updated!';
+    status.className = 'status success';
+    setTimeout(() => { status.textContent = ''; }, 3000);
+    loadKeys();
   } catch (error) {
     showToast('Failed to update key: ' + error.message, 'error');
   }
@@ -573,41 +562,45 @@ async function updateApiKey() {
 async function checkHealth() {
   try {
     const result = await apiGet('/api/health');
-    
     if (result.status === 'ok') {
       document.getElementById('server-status').textContent = '✅ Running';
       document.getElementById('server-port').textContent = window.location.port || '443/80';
     } else {
       document.getElementById('server-status').textContent = '⚠️ Issues detected';
     }
-  } catch (error) {
+  } catch {
     document.getElementById('server-status').textContent = '❌ Offline';
   }
 }
-
-// ============================================
-// Utilities
-// ============================================
 
 function showToast(message, type = '') {
   const toast = document.getElementById('toast');
   toast.textContent = message;
   toast.className = `toast ${type}`;
-  
-  // Clear any existing timeout
-  if (toast.timeout) {
-    clearTimeout(toast.timeout);
+
+  if (toast.timeout) clearTimeout(toast.timeout);
+  toast.timeout = setTimeout(() => { toast.classList.add('hidden'); }, 3000);
+}
+
+async function copyText(value, successMessage) {
+  try {
+    await navigator.clipboard.writeText(value || '');
+    showToast(successMessage, 'success');
+  } catch {
+    const textarea = document.createElement('textarea');
+    textarea.value = value || '';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    showToast(successMessage, 'success');
   }
-  
-  toast.timeout = setTimeout(() => {
-    toast.classList.add('hidden');
-  }, 3000);
 }
 
 function escapeHtml(text) {
-  if (!text) return '';
+  if (text === undefined || text === null) return '';
   const div = document.createElement('div');
-  div.textContent = text;
+  div.textContent = String(text);
   return div.innerHTML;
 }
 
