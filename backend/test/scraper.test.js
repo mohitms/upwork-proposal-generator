@@ -77,6 +77,14 @@ test('detectCloudflareFromHtml does not flag normal Upwork fixture as Cloudflare
   assert.equal(scraper.__test.detectCloudflareFromHtml(fixtureHtml), false);
 });
 
+test('isLikelyCloudflareChallengePage requires stronger challenge signal', () => {
+  const benignHtml = '<html><body><div>Ray ID: abc123</div></body></html>';
+  assert.equal(scraper.__test.isLikelyCloudflareChallengePage(benignHtml, ''), false);
+
+  const challengeHtml = '<html><body>Checking your browser before accessing</body></html>';
+  assert.equal(scraper.__test.isLikelyCloudflareChallengePage(challengeHtml, 'Just a moment...'), true);
+});
+
 test('normalizeScrapeError maps unknown errors to SCRAPE_FAILED', () => {
   const normalized = scraper.normalizeScrapeError(new Error('network issue'));
   assert.equal(normalized.code, scraper.SCRAPE_ERROR_CODES.SCRAPE_FAILED);

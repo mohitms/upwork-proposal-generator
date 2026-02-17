@@ -201,9 +201,23 @@ function detectCloudflareFromHtml(html) {
     'attention required! | cloudflare',
     'cf-browser-verification',
     'cdn-cgi/challenge-platform',
-    'cf-chl-',
-    'ray id:'
+    'cf-turnstile'
   ].some((marker) => normalized.includes(marker));
+}
+
+function isLikelyCloudflareChallengePage(html, pageTitle = '') {
+  const normalizedTitle = String(pageTitle || '').toLowerCase();
+  const normalizedHtml = String(html || '').toLowerCase();
+
+  const titleLooksLikeChallenge =
+    normalizedTitle.includes('just a moment') ||
+    normalizedTitle.includes('attention required');
+
+  const hasChallengePath = normalizedHtml.includes('cdn-cgi/challenge-platform');
+  const hasBrowserCheckText = normalizedHtml.includes('checking your browser before accessing');
+  const hasChallengeMarker = detectCloudflareFromHtml(normalizedHtml);
+
+  return titleLooksLikeChallenge || hasChallengePath || (hasChallengeMarker && hasBrowserCheckText);
 }
 
 function extractFromHtml(html, pageUrl, mode) {
@@ -280,13 +294,9 @@ function extractFromHtml(html, pageUrl, mode) {
 }
 
 async function detectCloudflareOnPage(page) {
-  const title = (await page.title().catch(() => '')).toLowerCase();
-  if (title.includes('just a moment') || title.includes('attention required')) {
-    return true;
-  }
-
+  const title = await page.title().catch(() => '');
   const html = await page.content().catch(() => '');
-  return detectCloudflareFromHtml(html);
+  return isLikelyCloudflareChallengePage(html, title);
 }
 
 async function scrapeWithPlaywright(url) {
@@ -311,21 +321,28 @@ async function scrapeWithPlaywright(url) {
 
     await page.waitForTimeout(1200);
 
-    const isCloudflareOnFirstPass = await detectCloudflareOnPage(page);
-    if (isCloudflareOnFirstPass) {
+    if (await detectCloudflareOnPage(page)) {
       await page.waitForTimeout(CHALLENGE_WAIT_MS);
       await page.waitForLoadState('domcontentloaded', { timeout: Math.min(NAVIGATION_TIMEOUT_MS, 15000) }).catch(() => {});
     }
 
     const finalUrl = page.url();
     assertAllowedUpworkHost(finalUrl);
+    const finalTitle = await page.title().catch(() => '');
     const html = await page.content();
-    const hasCloudflareMarkers = detectCloudflareFromHtml(html);
+    const challengeLikely = isLikelyCloudflareChallengePage(html, finalTitle);
 
     try {
-      return extractFromHtml(html, finalUrl, 'playwright');
+      const data = extractFromHtml(html, finalUrl, 'playwright');
+      if (challengeLikely) {
+        data.warnings = uniqueNonEmpty([
+          ...data.warnings,
+          'Cloudflare markers were detected; extracted data may be partial'
+        ]);
+      }
+      return data;
     } catch (extractError) {
-      if (isCloudflareOnFirstPass || hasCloudflareMarkers) {
+      if (challengeLikely) {
         throw new ScrapeError(
           SCRAPE_ERROR_CODES.SCRAPE_BLOCKED_CLOUDFLARE,
           'Could not fetch this URL due to page protection. Please fill fields manually and continue.',
@@ -367,21 +384,28 @@ async function scrapeWithParser(url) {
   }
 
   const htmlContent = typeof response.data === 'string' ? response.data : String(response.data || '');
+  const challengeLikely = isLikelyCloudflareChallengePage(htmlContent);
 
-  if (detectCloudflareFromHtml(htmlContent)) {
-    throw new ScrapeError(
-      SCRAPE_ERROR_CODES.SCRAPE_BLOCKED_CLOUDFLARE,
-      'Could not fetch this URL due to page protection. Please fill fields manually and continue.'
-    );
+  try {
+    const data = extractFromHtml(htmlContent, finalUrl, 'parser');
+    data.warnings = uniqueNonEmpty([
+      ...data.warnings,
+      'Used parser fallback extraction mode'
+    ]);
+    if (challengeLikely) {
+      data.warnings.push('Cloudflare markers were detected; extracted data may be partial');
+    }
+    return data;
+  } catch (extractError) {
+    if (challengeLikely) {
+      throw new ScrapeError(
+        SCRAPE_ERROR_CODES.SCRAPE_BLOCKED_CLOUDFLARE,
+        'Could not fetch this URL due to page protection. Please fill fields manually and continue.',
+        { cause: extractError }
+      );
+    }
+    throw extractError;
   }
-
-  const data = extractFromHtml(htmlContent, finalUrl, 'parser');
-  data.warnings = uniqueNonEmpty([
-    ...data.warnings,
-    'Used parser fallback extraction mode'
-  ]);
-
-  return data;
 }
 
 function normalizeScrapeError(error) {
@@ -415,7 +439,7 @@ async function scrapeJobUrl(rawUrl) {
       if (fallbackNormalized.code === SCRAPE_ERROR_CODES.SCRAPE_BLOCKED_CLOUDFLARE) {
         throw fallbackNormalized;
       }
-      throw normalizedError;
+      throw fallbackNormalized;
     }
   }
 }
@@ -433,6 +457,7 @@ module.exports = {
     extractBudgetFromText,
     extractSkillsFromText,
     extractFromHtml,
-    detectCloudflareFromHtml
+    detectCloudflareFromHtml,
+    isLikelyCloudflareChallengePage
   }
 };
