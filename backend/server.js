@@ -695,24 +695,18 @@ app.post('/api/extension/generate', extensionRateLimit, async (req, res) => {
 
     // Get prompts
     const prompts = db.prompts.getAll();
-    const systemPrompt = prompts.find(p => p.id === 'system')?.content || '';
-    const userPromptTemplate = prompts.find(p => p.id === 'user')?.content || '';
-
-    // Build the user prompt with job data
-    let userPrompt = userPromptTemplate
-      .replace('{{title}}', job.title || 'N/A')
-      .replace('{{description}}', job.description || 'N/A')
-      .replace('{{budget}}', job.budget || 'Not specified')
-      .replace('{{skills}}', (job.skills || []).join(', ') || 'None specified');
+    const systemPrompt = prompts.find(p => p.type === 'system')?.content || '';
+    const userPromptTemplate = prompts.find(p => p.type === 'user')?.content || '';
 
     // Generate proposal
     const result = await ai.generateProposal({
-      apiKey,
+      title: job.title,
+      description: job.description,
+      budget: job.budget || 'Not specified',
+      skills: (job.skills || []).join(', ') || 'None specified',
       systemPrompt,
-      userPrompt,
-      model: process.env.GLM_MODEL || 'glm-4.7-flash',
-      apiUrl: process.env.GLM_API_URL,
-      thinkingType: process.env.GLM_THINKING_TYPE || 'disabled'
+      userPromptTemplate,
+      apiKey
     });
 
     // Log the request

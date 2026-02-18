@@ -4,125 +4,45 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Download Chrome Extension | Upwork Proposal Generator</title>
-  <style>
-    :root {
-      --primary: #1abc9c;
-      --primary-dark: #16a085;
-      --bg: #f4f8f8;
-      --text: #172026;
-      --muted: #647381;
-      --card: #ffffff;
-      --border: #dde7e8;
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          border: "hsl(240 5.9% 90%)",
+          input: "hsl(240 5.9% 90%)",
+          ring: "hsl(240 5% 64.9%)",
+          background: "hsl(0 0% 100%)",
+          foreground: "hsl(240 10% 3.9%)",
+          primary: { DEFAULT: "hsl(222.2 47.4% 11.2%)", foreground: "hsl(210 40% 98%)" },
+          secondary: { DEFAULT: "hsl(240 4.8% 95.9%)", foreground: "hsl(240 5.9% 10%)" },
+          muted: { DEFAULT: "hsl(240 4.8% 95.9%)", foreground: "hsl(240 3.8% 46.1%)" },
+          accent: { DEFAULT: "hsl(240 4.8% 95.9%)", foreground: "hsl(240 5.9% 10%)" },
+          destructive: { DEFAULT: "hsl(0 84.2% 60.2%)", foreground: "hsl(210 40% 98%)" },
+          card: { DEFAULT: "hsl(0 0% 100%)", foreground: "hsl(240 10% 3.9%)" }
+        },
+        borderRadius: { lg: "0.5rem", md: "calc(0.5rem - 2px)", sm: "calc(0.5rem - 4px)" }
+      }
     }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at 5% 0%, rgba(26, 188, 156, 0.16), transparent 30%),
-        radial-gradient(circle at 95% 100%, rgba(22, 160, 133, 0.12), transparent 35%),
-        var(--bg);
-      line-height: 1.6;
-    }
-
-    .container {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 28px 16px 44px;
-    }
-
-    .hero {
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: #fff;
-      border-radius: 18px;
-      padding: 28px;
-      box-shadow: 0 18px 35px rgba(15, 68, 60, 0.22);
-      margin-bottom: 18px;
-    }
-
-    .hero h1 { margin: 0 0 8px; font-size: 30px; }
-    .hero p { margin: 0; opacity: 0.95; }
-
-    .version-badge {
-      display: inline-block;
-      margin-top: 12px;
-      background: rgba(255,255,255,0.2);
-      border: 1px solid rgba(255,255,255,0.3);
-      border-radius: 999px;
-      padding: 6px 12px;
-      font-weight: 700;
-      font-size: 13px;
-    }
-
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      box-shadow: 0 12px 26px rgba(19, 35, 43, 0.06);
-      padding: 22px;
-      margin-bottom: 16px;
-    }
-
-    h2 { margin: 0 0 12px; font-size: 22px; }
-
-    .download-btn {
-      border: 0;
-      border-radius: 12px;
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: #fff;
-      padding: 14px 18px;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-      min-width: 230px;
-    }
-
-    .download-btn:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
-    }
-
-    .status { margin-top: 10px; font-size: 14px; color: var(--muted); min-height: 22px; }
-    .status.error { color: #b42336; }
-    .status.success { color: #117a4f; }
-
-    .instructions ol { margin: 0; padding-left: 20px; }
-    .instructions li { margin-bottom: 8px; }
-
-    .changelog {
-      background: #f9fcfc;
-      border: 1px solid #e3eded;
-      border-radius: 12px;
-      padding: 14px;
-      white-space: pre-wrap;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
-      font-size: 13px;
-      max-height: 360px;
-      overflow: auto;
-    }
-  </style>
+  }
+  </script>
 </head>
-<body>
-  <div class="container">
-    <section class="hero">
-      <h1>Chrome Extension Download</h1>
-      <p>Install the Upwork Proposal Generator extension for one-click proposal generation directly on Upwork jobs.</p>
-      <div class="version-badge" id="version-badge">Version: Loading...</div>
+<body class="bg-slate-50 text-foreground antialiased">
+  <div class="mx-auto max-w-5xl px-4 py-8 sm:py-10">
+    <section class="rounded-lg border border-border bg-card p-6 shadow-sm sm:p-8">
+      <h1 class="text-3xl font-semibold tracking-tight">Chrome Extension Download</h1>
+      <p class="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Install the Upwork Proposal Generator extension for one-click proposal generation directly on Upwork jobs.</p>
+      <div id="version-badge" class="mt-5 inline-flex rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">Version: Loading...</div>
+      <div class="mt-6">
+        <button id="download-btn" class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-95">Download Extension</button>
+      </div>
+      <div id="download-status" class="mt-3 text-sm text-muted-foreground"></div>
     </section>
 
-    <section class="card">
-      <h2>Download</h2>
-      <p>Download the latest extension package (.zip) and extract it on your system before loading in Chrome.</p>
-      <button id="download-btn" class="download-btn">Download Extension</button>
-      <div id="download-status" class="status"></div>
-    </section>
-
-    <section class="card instructions">
-      <h2>Installation Instructions (Load Unpacked)</h2>
-      <ol>
+    <section class="mt-5 rounded-lg border border-border bg-card p-6 shadow-sm">
+      <h2 class="text-xl font-semibold tracking-tight">Installation Instructions</h2>
+      <ol class="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-muted-foreground">
         <li>Download and extract the extension ZIP file.</li>
         <li>Open <strong>chrome://extensions/</strong> in Google Chrome.</li>
         <li>Enable <strong>Developer mode</strong> (top-right).</li>
@@ -132,9 +52,9 @@
       </ol>
     </section>
 
-    <section class="card">
-      <h2>Version History</h2>
-      <div id="changelog" class="changelog">Loading changelog...</div>
+    <section class="mt-5 rounded-lg border border-border bg-card p-6 shadow-sm">
+      <h2 class="text-xl font-semibold tracking-tight">Version History</h2>
+      <div id="changelog" class="mt-3 max-h-96 overflow-auto rounded-md border border-border bg-slate-50 p-4 font-mono text-xs leading-6 text-slate-700">Loading changelog...</div>
     </section>
   </div>
 

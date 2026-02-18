@@ -4,34 +4,58 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Upwork Proposal Generator - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          border: "hsl(240 5.9% 90%)",
+          input: "hsl(240 5.9% 90%)",
+          ring: "hsl(240 5% 64.9%)",
+          background: "hsl(0 0% 100%)",
+          foreground: "hsl(240 10% 3.9%)",
+          primary: { DEFAULT: "hsl(222.2 47.4% 11.2%)", foreground: "hsl(210 40% 98%)" },
+          secondary: { DEFAULT: "hsl(240 4.8% 95.9%)", foreground: "hsl(240 5.9% 10%)" },
+          muted: { DEFAULT: "hsl(240 4.8% 95.9%)", foreground: "hsl(240 3.8% 46.1%)" },
+          accent: { DEFAULT: "hsl(240 4.8% 95.9%)", foreground: "hsl(240 5.9% 10%)" },
+          destructive: { DEFAULT: "hsl(0 84.2% 60.2%)", foreground: "hsl(210 40% 98%)" },
+          card: { DEFAULT: "hsl(0 0% 100%)", foreground: "hsl(240 10% 3.9%)" }
+        },
+        borderRadius: { lg: "0.5rem", md: "calc(0.5rem - 2px)", sm: "calc(0.5rem - 4px)" }
+      }
+    }
+  }
+  </script>
   <link rel="stylesheet" href="/style.css">
 </head>
-<body class="auth-page">
-  <div class="auth-background-glow auth-background-glow--one" aria-hidden="true"></div>
-  <div class="auth-background-glow auth-background-glow--two" aria-hidden="true"></div>
-
-  <main class="auth-card" role="main">
-    <div class="auth-brand">
-      <div class="auth-logo" aria-hidden="true">UP</div>
-      <p class="auth-kicker">Admin Access</p>
-      <h1>Upwork Proposal Generator</h1>
-      <p class="auth-subtitle">Sign in to manage proposals, templates, and generation settings.</p>
-    </div>
-
-    <form id="login-form" class="auth-form" novalidate>
-      <div class="auth-field">
-        <label for="username">Username</label>
-        <input type="text" id="username" name="username" required autocomplete="username" placeholder="Enter your username">
+<body class="min-h-screen bg-slate-50 text-foreground antialiased">
+  <main class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-slate-50 to-slate-100/70" role="main">
+    <section class="w-full max-w-md rounded-lg border border-border bg-card p-8 shadow-sm">
+      <div class="mb-6">
+        <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-semibold">UP</div>
+        <p class="text-xs uppercase tracking-wide text-muted-foreground font-medium">Admin Access</p>
+        <h1 class="mt-1 text-2xl font-semibold tracking-tight">Upwork Proposal Generator</h1>
+        <p class="mt-2 text-sm text-muted-foreground leading-6">Sign in to manage proposals, prompts, and dashboard settings.</p>
       </div>
 
-      <div class="auth-field">
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Enter your password">
-      </div>
+      <form id="login-form" class="space-y-4" novalidate>
+        <div>
+          <label for="username" class="mb-2 block text-sm font-medium">Username</label>
+          <input type="text" id="username" name="username" required autocomplete="username" placeholder="Enter your username"
+            class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30">
+        </div>
 
-      <button type="submit" id="login-btn" class="btn btn-primary auth-submit">Sign In</button>
-      <p id="login-error" class="auth-error hidden" role="alert"></p>
-    </form>
+        <div>
+          <label for="password" class="mb-2 block text-sm font-medium">Password</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Enter your password"
+            class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30">
+        </div>
+
+        <button type="submit" id="login-btn" class="btn btn-primary w-full">Sign In</button>
+        <p id="login-error" class="hidden text-sm text-destructive" role="alert"></p>
+      </form>
+    </section>
   </main>
 
   <script src="/login.js"></script>
